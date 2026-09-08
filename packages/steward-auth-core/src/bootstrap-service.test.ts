@@ -10,7 +10,7 @@ import {
   mintStewardIdV1,
   type StewardBootstrapV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { StewardBootstrapService } from "./bootstrap-service.js";
 import { StewardAuthorizationLedger } from "./ledger.js";
 import { createOpenPgpBackend } from "./openpgp-backend.js";

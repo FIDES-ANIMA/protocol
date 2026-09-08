@@ -24,7 +24,7 @@ import {
   type MandateLedgerEntry,
   type MandateStoreFile,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { ClassificationId } from "./risk-classifier.js";
 import type { LiveMandateCoverage } from "./disposition-engine.js";
 

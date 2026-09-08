@@ -7,7 +7,7 @@
 import type {
   EnforcementRuntime,
   FppToolCallContext,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 
 export type ToolInvoke = (
   toolName: string,

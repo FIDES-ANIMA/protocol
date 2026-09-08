@@ -1,13 +1,15 @@
-# @ovrsr/fpp-protocol-core
+# @fides-anima/fpp-protocol-core
 
 Shared versioned schemas and cryptographic contracts for the Freedom Preserving Protocol.
 
-Package version and protocol schema version are independent. This package (`1.0.0`) carries **schema version 2**.
+Package version and protocol schema version are independent. This package (`1.0.2`) carries **schema version 2**.
 
 ## Install
 
+This package is staged for public npm but has not been published from this repository yet. Until the first release, use the workspace or a local packed tarball.
+
 ```bash
-npm install @ovrsr/fpp-protocol-core@1.0.0
+npm install @fides-anima/fpp-protocol-core@1.0.2
 ```
 
 Published plugins pin an **exact** core version to prevent silent protocol drift.
@@ -26,13 +28,13 @@ Path defaults are resolved via `resolveWorkspaceRoot` / `workspaceFile`:
 This package is developed via npm workspaces from the repository root. Local consumers (`plugin/`, `plugin-trust/`) resolve the workspace package while published manifests keep the exact version pin.
 
 ```bash
-npm run build -w @ovrsr/fpp-protocol-core
-npm test -w @ovrsr/fpp-protocol-core
+npm run build -w @fides-anima/fpp-protocol-core
+npm test -w @fides-anima/fpp-protocol-core
 ```
 
 ### Lockfile migration
 
-Nested `plugin/package-lock.json` and `plugin-trust/package-lock.json` were removed when workspaces were introduced. The single root `package-lock.json` is the source of truth for local development. Published plugin tarballs still declare an exact `@ovrsr/fpp-protocol-core` version and resolve it from the registry (or a local pack) at install time.
+Nested plugin lockfiles were removed when workspaces were introduced. The single root `package-lock.json` is the source of truth for local development. Plugin tarballs declare an exact `@fides-anima/fpp-protocol-core` version and continue to bundle it during the first-registry-release transition.
 
 ## License
 

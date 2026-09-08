@@ -104,12 +104,12 @@ describe("runtime manifest binding", () => {
 
   it("changes package build hash when version vector changes", () => {
     const a = computePackageBuildHash({
-      name: "@ovrsr/openclaw-fpp-plugin",
+      name: "@fides-anima/openclaw-fpp-plugin",
       version: "1.1.4",
       pluginApi: ">=2026.3.28",
     });
     const b = computePackageBuildHash({
-      name: "@ovrsr/openclaw-fpp-plugin",
+      name: "@fides-anima/openclaw-fpp-plugin",
       version: "1.1.5",
       pluginApi: ">=2026.3.28",
     });

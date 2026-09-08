@@ -7,7 +7,7 @@ hooks or use `--dangerously-skip-permissions`.
 ## Prerequisites
 
 - Node `>=22.19`
-- Clone of this repository **or** packed adapter tarball after `bundle:deps` / `prepack` (private; embeds unpublished `@ovrsr/*`)
+- Clone of this repository **or** a packed adapter tarball after `bundle:deps` / `prepack`; `@fides-anima/fpp-adapter-claude-code` is staged for public npm but has not completed its first publish
 - Claude Code with hooks configured in `.claude/settings.json` or `~/.claude/settings.json`
 
 ## Install prompt layer
@@ -20,11 +20,13 @@ cp -r . .claude/skills/freedom-preserving-protocol
 
 ## Enable adapter hooks
 
-Merge `harness/claude-code/adapter/hooks/settings.fragment.json` into your Claude
-settings `hooks` block. The sample command:
+Merge `harness/claude-code/adapter/hooks/settings.fragment.json` (or
+`node_modules/@fides-anima/fpp-adapter-claude-code/hooks/settings.fragment.json`
+after package installation) into your Claude settings `hooks` block. The
+sample command:
 
 ```text
-npx tsx harness/claude-code/adapter/src/hook-cli.ts
+npx --no-install fpp-claude-code-hook
 ```
 
 Default workspace profile: `claude-code` → `~/.fpp/claude-code`.

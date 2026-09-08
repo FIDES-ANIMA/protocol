@@ -5,7 +5,7 @@
  * Not constitutional ratification — local operator policy only.
  */
 
-import type { QuorumClass } from "@ovrsr/fpp-protocol-core";
+import type { QuorumClass } from "@fides-anima/fpp-protocol-core";
 import {
   isKeyValidAt,
   type KeyLifecycleLedger,

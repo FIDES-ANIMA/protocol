@@ -1,5 +1,5 @@
 {
-  "name": "@ovrsr/openclaw-fpp-trust",
+  "name": "@fides-anima/openclaw-fpp-trust",
   "version": "1.2.12",
   "description": "OpenClaw plugin: agent-to-agent trust graph and constitutional handshake for the Freedom Preserving Protocol",
   "type": "module",
@@ -7,7 +7,7 @@
   "author": "ovrsr",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ovrsr/freedom-preserving-protocol",
+    "url": "git+https://github.com/ovrsr/freedom-preserving-protocol.git",
     "directory": "harness/openclaw/plugin-trust"
   },
   "main": "./dist/index.js",
@@ -17,13 +17,16 @@
     "src/",
     "openclaw.plugin.json",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "constitution.json",
+    "constitution.yaml",
+    "SKILL.md"
   ],
   "bundledDependencies": [
-    "@ovrsr/fpp-protocol-core",
-    "@ovrsr/fpp-trust-core",
-    "@ovrsr/fpp-enforcement-core",
-    "@ovrsr/fpp-steward-auth-core"
+    "@fides-anima/fpp-protocol-core",
+    "@fides-anima/fpp-trust-core",
+    "@fides-anima/fpp-enforcement-core",
+    "@fides-anima/fpp-steward-auth-core"
   ],
   "openclaw": {
     "extensions": [
@@ -49,10 +52,10 @@
   "dependencies": {
     "@noble/ed25519": "^2.1.0",
     "@noble/hashes": "^1.4.0",
-    "@ovrsr/fpp-enforcement-core": "1.0.3",
-    "@ovrsr/fpp-protocol-core": "1.0.2",
-    "@ovrsr/fpp-steward-auth-core": "0.1.0",
-    "@ovrsr/fpp-trust-core": "1.0.2",
+    "@fides-anima/fpp-enforcement-core": "1.0.3",
+    "@fides-anima/fpp-protocol-core": "1.0.2",
+    "@fides-anima/fpp-steward-auth-core": "0.1.0",
+    "@fides-anima/fpp-trust-core": "1.0.2",
     "@sinclair/typebox": "^0.34.0",
     "openpgp": "^6.2.0"
   },
@@ -73,5 +76,12 @@
   },
   "engines": {
     "node": ">=22.19"
+  },
+  "homepage": "https://github.com/ovrsr/freedom-preserving-protocol#readme",
+  "bugs": {
+    "url": "https://github.com/ovrsr/freedom-preserving-protocol/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

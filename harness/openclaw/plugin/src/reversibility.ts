@@ -1,1 +1,1 @@
-export { isReversibleClassification } from "@ovrsr/fpp-enforcement-core";
+export { isReversibleClassification } from "@fides-anima/fpp-enforcement-core";

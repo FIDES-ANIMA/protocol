@@ -3,4 +3,4 @@ export {
   digestActionParams,
   type PendingReceiptRecord,
   type ReceiptStoreOptions,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

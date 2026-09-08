@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import {
   DEFAULT_CONFIG,
   type FppPluginConfig,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 
 export {
   CONSERVATIVE_STRICT_APPROVAL_ON,
@@ -20,7 +20,7 @@ export {
   type DispositionMode,
   type FppPluginConfig,
   type MergeConfigResult,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 
 /** Fields whose manifest `default` must match DEFAULT_CONFIG. */
 const MANIFEST_DEFAULT_KEYS: (keyof FppPluginConfig)[] = [

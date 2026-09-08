@@ -1,5 +1,5 @@
 {
-  "name": "@ovrsr/fpp-gateway-reference",
+  "name": "@fides-anima/fpp-gateway-reference",
   "version": "0.1.0",
   "description": "Non-default CI reference stub for gateway-shaped FPP disposition (not a production gateway)",
   "type": "module",
@@ -24,8 +24,8 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@ovrsr/fpp-enforcement-core": "1.0.3",
-    "@ovrsr/fpp-protocol-core": "1.0.2"
+    "@fides-anima/fpp-enforcement-core": "1.0.3",
+    "@fides-anima/fpp-protocol-core": "1.0.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

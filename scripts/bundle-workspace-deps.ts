@@ -9,7 +9,7 @@
  *   npx tsx scripts/bundle-workspace-deps.ts --package harness/openclaw/plugin
  *   npx tsx scripts/bundle-workspace-deps.ts --package harness/openclaw/plugin-trust
  *   npx tsx scripts/bundle-workspace-deps.ts --package harness/cursor/adapter
- *   npx tsx scripts/bundle-workspace-deps.ts --package harness/openclaw/plugin --deps @ovrsr/fpp-protocol-core@1.0.0
+ *   npx tsx scripts/bundle-workspace-deps.ts --package harness/openclaw/plugin --deps @fides-anima/fpp-protocol-core@1.0.0
  *
  * Default deps: consumer package.json `bundledDependencies` with exact pins
  * from `dependencies`. Refuses ranges and version mismatches.
@@ -55,7 +55,23 @@ function readJson(path: string): PackageJson {
   return JSON.parse(readFileSync(path, "utf8")) as PackageJson;
 }
 
-/** Map @ovrsr package name → packages/<dir> or harness package dir under repo root. */
+function pruneTestOnlyFiles(dir: string): void {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      pruneTestOnlyFiles(path);
+    } else if (
+      entry.name.endsWith(".test.ts") ||
+      entry.name === "test-helpers.ts" ||
+      entry.name.startsWith("test-helpers.")
+    ) {
+      rmSync(path, { force: true });
+    }
+  }
+}
+
+/** Map @fides-anima package name → packages/<dir> or harness package dir under repo root. */
 export function findWorkspacePackageDir(
   repoRoot: string,
   name: string,
@@ -200,7 +216,10 @@ export async function bundleWorkspaceDeps(
       ];
       // Always include package.json + license/readme when present
       const always = ["package.json", "LICENSE", "README.md", "readme.md"];
-      const toCopy = new Set<string>([...always, ...publishFiles]);
+      const toCopy = new Set<string>([
+        ...always,
+        ...publishFiles.filter((entry) => !entry.startsWith("!")),
+      ]);
 
       for (const entry of toCopy) {
         const src = join(wsDir, entry);
@@ -211,6 +230,7 @@ export async function bundleWorkspaceDeps(
         mkdirSync(dirname(destPath), { recursive: true });
         cpSync(src, destPath, { recursive: true });
       }
+      pruneTestOnlyFiles(stagedPkg);
 
       if (!existsSync(join(stagedPkg, "package.json"))) {
         throw new Error(`Failed to stage package.json for ${name}`);

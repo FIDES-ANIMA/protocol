@@ -22,7 +22,7 @@ import {
   type GovernanceMode,
   type MerkleProof,
   type ReceiptInclusionEvidenceV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   EVIDENCE_CLASS_CEILINGS,
   type EvidenceClass,

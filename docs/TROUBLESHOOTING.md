@@ -46,7 +46,7 @@ Refuses when never adopted or when `.fpp-revoked` is present. Use `--if-missing`
 
 **Investigation (Axiom hosts):**
 
-1. **Relative manifest defaults + CWD** — Older trust/enforcement merges kept relative paths like `.openclaw/workspace/fpp-trust-graph.json` as-is. If the gateway process CWD was not `$HOME`, files could land under `<cwd>/.openclaw/workspace/...` (or nowhere useful). **Fix:** `mergeTrustConfig` / `mergeConfig` now call `absolutizeWorkspacePath` from `@ovrsr/fpp-protocol-core` so relative paths resolve under `$FPP_WORKSPACE` or `<homedir>/.openclaw/workspace`.
+1. **Relative manifest defaults + CWD** — Older trust/enforcement merges kept relative paths like `.openclaw/workspace/fpp-trust-graph.json` as-is. If the gateway process CWD was not `$HOME`, files could land under `<cwd>/.openclaw/workspace/...` (or nowhere useful). **Fix:** `mergeTrustConfig` / `mergeConfig` now call `absolutizeWorkspacePath` from `@fides-anima/fpp-protocol-core` so relative paths resolve under `$FPP_WORKSPACE` or `<homedir>/.openclaw/workspace`.
 2. **Empty graph = no file (expected)** — `plugin-trust` only persists on `trustGraph.setOnChange` (debounced save after the first mutation, e.g. successful handshake verify). An empty in-memory graph does **not** write a marker file. Missing `fpp-trust-graph.json` before any peer verify is **not** corruption.
 3. **Where to look after a successful handshake** — `$FPP_WORKSPACE/fpp-trust-graph.json` when set, else `~/.openclaw/workspace/fpp-trust-graph.json` (absolutized). Same root for `fpp-replay-cache.json`, `fpp-strict-sessions.json`, `fpp-quorum-sessions.json`.
 
@@ -92,8 +92,8 @@ cd /path/to/freedom-preserving-protocol
 git rev-parse HEAD
 git log -1 --format='%ci %s'
 # After local pack/install:
-npm pack -w @ovrsr/openclaw-fpp-plugin --dry-run
-npm pack -w @ovrsr/openclaw-fpp-trust --dry-run
+npm pack -w @fides-anima/openclaw-fpp-plugin --dry-run
+npm pack -w @fides-anima/openclaw-fpp-trust --dry-run
 ```
 
 Keep the git SHA + build time with the host's install notes. Do **not** treat drift alone as compromise.
@@ -117,20 +117,20 @@ Keep the git SHA + build time with the host's install notes. Do **not** treat dr
 
 ### Codex adapter / plugin registration errors
 
-**Reported by Axiom** (not always reproducible in this monorepo CI): Codex plugin registration failures typically mean (a) `~/.codex/hooks.json` points at a missing `harness/codex/adapter` path, (b) Node engine `<22.19` without `--ignore-engines`, or (c) bundled `@ovrsr/fpp-*-core` missing from an incomplete pack. The Codex adapter is **not** an OpenClaw `registerCli` surface — it uses PreToolUse hooks (`harness/codex/adapter`). Treat Codex errors separately from `fpp-trust` CLI gaps.
+**Reported by Axiom** (not always reproducible in this monorepo CI): Codex plugin registration failures typically mean (a) `~/.codex/hooks.json` points at a missing `harness/codex/adapter` path, (b) Node engine `<22.19` without `--ignore-engines`, or (c) bundled `@fides-anima/fpp-*-core` missing from an incomplete pack. The Codex adapter is **not** an OpenClaw `registerCli` surface — it uses PreToolUse hooks (`harness/codex/adapter`). Treat Codex errors separately from `fpp-trust` CLI gaps.
 
-## 0. "`npm` / OpenClaw install fails with missing `@ovrsr/fpp-*-core`"
+## 0. "`npm` / OpenClaw install fails with a missing FPP core"
 
-**Cause:** Older ClawHub plugin versions listed `@ovrsr/fpp-protocol-core`, `@ovrsr/fpp-enforcement-core`, and/or `@ovrsr/fpp-trust-core` as normal dependencies, but those packages are **not** on the public npm registry. OpenClaw's managed install (`npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts`) cannot fetch them.
+**Cause:** Pre-migration ClawHub releases referenced unpublished `@ovrsr/fpp-*-core` names. Current source stages the replacement packages under `@fides-anima`, but they are not available from this repository's public npm release until a maintainer completes the first publish. OpenClaw's managed install (`npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts`) cannot fetch a missing core.
 
 **Fix:**
 1. Upgrade to a plugin version that embeds cores via `bundledDependencies` (enforcement `>=1.1.6`, trust `>=1.2.4`), or rebuild from this repo and install a local tarball:
    ```bash
-   cd plugin && npm pack   # runs prepack → bundle:deps
-   openclaw plugins install npm-pack:./ovrsr-openclaw-fpp-plugin-*.tgz
+   cd harness/openclaw/plugin && npm pack   # runs prepack → bundle:deps
+   openclaw plugins install npm-pack:./fides-anima-openclaw-fpp-plugin-*.tgz
    ```
 2. For a broken install already on disk: uninstall the plugin, then install the new ClawHub version (or local pack).
-3. Maintainers: never publish a plugin that lists `@ovrsr/fpp-*-core` in `dependencies` unless those names are also in `bundledDependencies` and present under `node_modules/@ovrsr/` in the tarball (`bash scripts/verify-pack.sh`, `bash scripts/smoke-plugin-install.sh`).
+3. Maintainers: during registry migration, never publish a plugin that lists `@fides-anima/fpp-*-core` in `dependencies` unless those names are also in `bundledDependencies` and present under `node_modules/@fides-anima/` in the tarball (`bash scripts/verify-pack.sh`, `bash scripts/smoke-plugin-install.sh`).
 
 ## 1. "I installed the skill but `openclaw hooks list` shows nothing"
 
@@ -212,7 +212,7 @@ npm run audit:verify
 
 This means the audit log has been edited, truncated, or extended by something that did not use `audit-append.ts`. **Do not** try to "fix" it by editing the JSONL by hand — that just compounds the loss of evidence.
 
-The enforcement plugin (`@ovrsr/openclaw-fpp-plugin`) treats a malformed audit tail as **corruption**, not as an empty chain. Appends throw `AuditCorruptionError` instead of restarting from `previousHash: 0000...`. With the default `auditFailureBehavior: "fail-closed"`, high-risk and approval-gated tool calls are blocked until the log is recovered. If you see `FPP AUDIT-GAP:` in gateway logs, a post-approval outcome could not be recorded, a receipt correlation failed (missing `toolCallId`, overflow, orphan after restart), or the typed receipt ledger could not be written — preserve the existing files and follow recovery below. Verify receipts with `npm run receipt:verify`.
+The enforcement plugin (`@fides-anima/openclaw-fpp-plugin`) treats a malformed audit tail as **corruption**, not as an empty chain. Appends throw `AuditCorruptionError` instead of restarting from `previousHash: 0000...`. With the default `auditFailureBehavior: "fail-closed"`, high-risk and approval-gated tool calls are blocked until the log is recovered. If you see `FPP AUDIT-GAP:` in gateway logs, a post-approval outcome could not be recorded, a receipt correlation failed (missing `toolCallId`, overflow, orphan after restart), or the typed receipt ledger could not be written — preserve the existing files and follow recovery below. Verify receipts with `npm run receipt:verify`.
 
 Recommended response:
 
@@ -332,9 +332,9 @@ Human-signed operator grants live in `fpp-steward-authorization-ledger.jsonl` (c
 | Grant admitted but action still denied | Scope mismatch, ambiguous `apply_patch` paths, exhausted uses, revoked key, hard-floor, or missing `outOfWorkspacePaths` alias | Exact classifications/tools/paths; contained absolute paths resolve to workspace-relative targets; files outside `~/.openclaw/workspace` need an exact map entry whose alias matches the grant; hard floors cannot be overridden |
 | `remainingUses` unchanged after benign confirmations / already-allowed calls | Required-only consumption — ordinary allow paths do not debit | Expected when standing allow, classifier allow, or staged/reversible allow already permits the call. Scope match alone does not consume; only a baseline block/approval that the grant converts to allow decrements uses. See `docs/architecture/steward-operator-authorization.md` |
 | Second identical `apply_patch` denied after one allow | One-shot / maxUses consumed on a required authorization boundary | Expected — issue a new authorization |
-| Live Codex `apply_patch` always ambiguous / never consumes | Payload under `params.command` or structured `params.changes[]` not recognized by an old core; absolute external target without map | Upgrade `@ovrsr/fpp-enforcement-core` ≥ `1.0.3` / plugin ≥ `1.1.18`; configure `outOfWorkspacePaths`; **full gateway restart** after manifest schema changes (hot reload will not pick up new config fields) |
+| Live Codex `apply_patch` always ambiguous / never consumes | Payload under `params.command` or structured `params.changes[]` not recognized by an old core; absolute external target without map | Upgrade `@fides-anima/fpp-enforcement-core` ≥ `1.0.3` / plugin ≥ `1.1.18`; configure `outOfWorkspacePaths`; **full gateway restart** after manifest schema changes (hot reload will not pick up new config fields) |
 | Enforcement hook missing after a diagnostic edit | Top-level `await` in plugin entry rejected by gateway loader | Remove top-level await; keep entry synchronous; restart gateway |
-| Installed build looks current but live behavior is old | `packageBuildHash` only hashes package metadata | Inspect packed nested `node_modules/@ovrsr/fpp-enforcement-core/dist/action-descriptor.js` for `command` / structured `changes` handling |
+| Installed build looks current but live behavior is old | `packageBuildHash` only hashes package metadata | Inspect packed nested `node_modules/@fides-anima/fpp-enforcement-core/dist/action-descriptor.js` for `command` / structured `changes` handling |
 
 The interactive suffix is a software attention check, not MFA and not a secret. Privileged local compromise remains outside this profile. FIDO2/WebAuthn, out-of-band second-device approval, and OS-auth/elevation-backed ceremonies are separate platform-specific work tracked in `docs/ROADMAP.md` §6.
 
@@ -354,7 +354,7 @@ Quorum unreachable warns are trust-local and **not** gated on enforcement `dispo
 
 ### ClawHub `suspicious.exposed_secret_literal` on `authorization: "standing-allowlist"`
 
-**Resolved false positive.** Scanners treat `authorization: "<string>"` as an API-token pattern. Those values are `AuthorizationClass` wire enums (mandate / standing-allowlist / emergency / …), not credentials. Production sources use named `AUTHZ` constants from `@ovrsr/fpp-protocol-core` (property shorthand) so the adjacent literal pattern is gone; on-wire values are unchanged.
+**Resolved false positive.** Scanners treat `authorization: "<string>"` as an API-token pattern. Those values are `AuthorizationClass` wire enums (mandate / standing-allowlist / emergency / …), not credentials. Production sources use named `AUTHZ` constants from `@fides-anima/fpp-protocol-core` (property shorthand) so the adjacent literal pattern is gone; on-wire values are unchanged.
 
 ### OpenClaw floor `>=2026.3.28`
 
@@ -570,7 +570,7 @@ If the persisted trust graph (`fpp-trust-graph.json`) is malformed or a **v2 sna
 | `npx tsx scripts/skill-self-check.ts --root <skill>` after `npm install` | `deps.noble` ok |
 | `npm run audit:bootstrap -- --soul <adopted SOUL>` | creates/appends chain-valid log |
 | `npm run audit:verify` | exit 0 |
-| `npm test -w @ovrsr/fpp-enforcement-core` | `internal.read` / `internal.heartbeat` / `gateway.inspect` allow; `apply_patch` → `code.patch` |
+| `npm test -w @fides-anima/fpp-enforcement-core` | `internal.read` / `internal.heartbeat` / `gateway.inspect` allow; `apply_patch` → `code.patch` |
 | `npx tsx --test packages/trust-core/src/create-trust-stack.path.test.ts` | relative paths absolutize |
 | `npx tsx --test harness/openclaw/plugin-trust/src/resolve-adopted-at.test.ts` | SOUL/adoption-state `adoptedAt` |
 

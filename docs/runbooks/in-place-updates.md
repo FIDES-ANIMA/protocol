@@ -19,7 +19,7 @@ Do not use this runbook to modify adoption state. It does not edit `SOUL.md`, `M
 - plugins: packed from `harness/openclaw/plugin/` or `harness/openclaw/plugin-trust/` after `build` + `bundle:deps`
 - adapters: packed from `harness/<harness>/adapter/` after `build` + `bundle:deps`
 
-This matters because copying raw monorepo directories into live installs can leave behind unpublished files, missing bundled `@ovrsr/*` dependencies, or a half-built `dist/`.
+This matters because copying raw monorepo directories into live installs can leave behind unpublished files, missing bundled `@fides-anima/*` dependencies, or a half-built `dist/`.
 
 ### Ownership model
 

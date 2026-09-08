@@ -13,11 +13,11 @@ import {
   resolveDisposition,
   DEFAULT_CONFIG,
   PACKAGE_NAME as ENFORCEMENT_NAME,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import {
   createTrustStack,
   PACKAGE_NAME as TRUST_NAME,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -84,8 +84,8 @@ describe("library consumer smoke (no OpenClaw peer)", () => {
     assertNoOpenclawImport(join(REPO_ROOT, "packages/enforcement-core/src"));
     assertNoOpenclawImport(join(REPO_ROOT, "packages/trust-core/src"));
     assertNoOpenclawImport(join(REPO_ROOT, "packages/steward-auth-core/src"));
-    assert.equal(ENFORCEMENT_NAME, "@ovrsr/fpp-enforcement-core");
-    assert.equal(TRUST_NAME, "@ovrsr/fpp-trust-core");
+    assert.equal(ENFORCEMENT_NAME, "@fides-anima/fpp-enforcement-core");
+    assert.equal(TRUST_NAME, "@fides-anima/fpp-trust-core");
   });
 
   it("classify + resolveDisposition + createTrustStack run without openclaw", () => {

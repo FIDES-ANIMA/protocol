@@ -5,4 +5,4 @@ export {
   collectReceiptLeaves,
   createReceiptProof,
   RECEIPT_LOG_KIND,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

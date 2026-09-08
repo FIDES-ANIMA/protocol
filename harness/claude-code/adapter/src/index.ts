@@ -16,4 +16,4 @@ export {
   type ToolProxy,
   type ToolInvoke,
   type ToolProxyCallContext,
-} from "@ovrsr/fpp-tool-proxy";
+} from "@fides-anima/fpp-tool-proxy";

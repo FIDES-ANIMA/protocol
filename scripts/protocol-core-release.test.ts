@@ -63,8 +63,8 @@ describe("protocol-core release ordering", () => {
         string,
         string
       >;
-      assert.equal(deps["@ovrsr/fpp-protocol-core"], coreVer);
-      assert.doesNotMatch(deps["@ovrsr/fpp-protocol-core"], /[\^~*]/);
+      assert.equal(deps["@fides-anima/fpp-protocol-core"], coreVer);
+      assert.doesNotMatch(deps["@fides-anima/fpp-protocol-core"], /[\^~*]/);
     }
   });
 
@@ -104,7 +104,7 @@ describe("protocol-core release ordering", () => {
 
   it("core dist exists after build (missing build blocks consumers)", () => {
     const dist = join(root, "packages/protocol-core/dist/index.js");
-    const build = spawnSync("npm", ["run", "build", "-w", "@ovrsr/fpp-protocol-core"], {
+    const build = spawnSync("npm", ["run", "build", "-w", "@fides-anima/fpp-protocol-core"], {
       cwd: root,
       encoding: "utf8",
       shell: true,

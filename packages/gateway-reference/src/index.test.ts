@@ -10,8 +10,8 @@ import { tmpdir } from "node:os";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
 import { bytesToHex } from "@noble/hashes/utils";
-import { createEnforcementRuntime } from "@ovrsr/fpp-enforcement-core";
-import { signMessage, verifySignature } from "@ovrsr/fpp-protocol-core";
+import { createEnforcementRuntime } from "@fides-anima/fpp-enforcement-core";
+import { signMessage, verifySignature } from "@fides-anima/fpp-protocol-core";
 import {
   createGatewayReferenceRouter,
   GatewayReferenceDisabledError,
@@ -168,7 +168,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
   }
 
@@ -307,7 +307,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.throws(
       () =>
@@ -334,7 +334,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier: { verify: () => false },
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.throws(
       () =>
@@ -352,7 +352,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
       ioHooks: {
         beforeRead: () => {
           throw new Error("injected read failure");
@@ -380,7 +380,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.throws(
       () =>
@@ -402,7 +402,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.equal(
       original.append({
@@ -417,7 +417,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier,
       constitutionHash: "bb".repeat(32),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.throws(
       () =>
@@ -627,7 +627,7 @@ describe("gateway governance transitions", () => {
       signer,
       verifier: { verify: () => false },
       constitutionHash: "71bf60ad" + "0".repeat(56),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const router = createGatewayReferenceRouter({
       enabled: true,

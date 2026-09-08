@@ -7,4 +7,4 @@ export {
   saveTrustGraphSync,
   type LoadTrustGraphOptions,
   type SaveTrustGraphOptions,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

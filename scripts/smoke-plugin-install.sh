@@ -29,7 +29,7 @@ smoke_one() {
     --package "$pkg_dir" --destination "$(npm_path "$pack_dir")")
 
   local tgz
-  tgz="$(ls "$pack_dir"/ovrsr-openclaw-fpp-*.tgz 2>/dev/null | head -1 || true)"
+  tgz="$(ls "$pack_dir"/fides-anima-openclaw-fpp-*.tgz 2>/dev/null | head -1 || true)"
   [[ -n "$tgz" && -f "$tgz" ]] || { echo "FAIL: no tarball for $label in $pack_dir"; return 1; }
 
   # Install via a relative path inside the isolate dir so Windows npm never
@@ -45,7 +45,7 @@ smoke_one() {
   local plugin_dir
   plugin_dir="$(cd "$isol" && node -e "
     const fs=require('fs');const path=require('path');
-    const scope=path.join('node_modules','@ovrsr');
+    const scope=path.join('node_modules','@fides-anima');
     for (const e of fs.readdirSync(scope)) {
       if (e.startsWith('openclaw-fpp-')) { process.stdout.write(path.join(scope,e)); break; }
     }
@@ -60,11 +60,11 @@ smoke_one() {
 }
 
 case "$target" in
-  plugin) smoke_one harness/openclaw/plugin "@ovrsr/fpp-enforcement-core" "enforcement-plugin" ;;
-  trust)  smoke_one harness/openclaw/plugin-trust "@ovrsr/fpp-trust-core" "trust-plugin" ;;
+  plugin) smoke_one harness/openclaw/plugin "@fides-anima/fpp-enforcement-core" "enforcement-plugin" ;;
+  trust)  smoke_one harness/openclaw/plugin-trust "@fides-anima/fpp-trust-core" "trust-plugin" ;;
   all)
-    smoke_one harness/openclaw/plugin "@ovrsr/fpp-enforcement-core" "enforcement-plugin"
-    smoke_one harness/openclaw/plugin-trust "@ovrsr/fpp-trust-core" "trust-plugin"
+    smoke_one harness/openclaw/plugin "@fides-anima/fpp-enforcement-core" "enforcement-plugin"
+    smoke_one harness/openclaw/plugin-trust "@fides-anima/fpp-trust-core" "trust-plugin"
     ;;
   *) echo "Usage: $0 [plugin|trust|all]"; exit 1 ;;
 esac

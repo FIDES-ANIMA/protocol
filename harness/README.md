@@ -20,4 +20,4 @@ Machine-readable matrix: [`shared/harness-capabilities.json`](shared/harness-cap
 Adapters do **not** claim OpenClaw parity where the harness cannot provide it.
 See `docs/COMPATIBILITY.md` and each harness `runbook.md`.
 
-Shared MCP/sidecar proxy: `@ovrsr/fpp-tool-proxy` (`packages/tool-proxy`).
+Shared MCP/sidecar proxy: `@fides-anima/fpp-tool-proxy` (`packages/tool-proxy`).

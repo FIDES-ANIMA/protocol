@@ -2,4 +2,4 @@ export {
   loadOrCreateIdentity,
   verifySignature,
   type AgentIdentity,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

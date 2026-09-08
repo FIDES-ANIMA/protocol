@@ -8,18 +8,18 @@ export {
   type CapsuleValidation,
   type CapsuleView,
   type CapsuleViewSummaries,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 
 import {
   parseAdoptionDisclosure,
   validateCapsuleAdoptionConsistency,
   type CapsuleAdoptionDisclosureSummary,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   validateTrustStateCapsule as validateTrustStateCapsuleCore,
   type CapsuleValidation,
-} from "@ovrsr/fpp-trust-core";
-import type { FreshnessPolicy } from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-trust-core";
+import type { FreshnessPolicy } from "@fides-anima/fpp-protocol-core";
 
 /**
  * Peer validation for capsules that carry graded adoption disclosures.

@@ -23,8 +23,8 @@ import {
   canonicalizeV2,
   parseOperatorAuthorization,
   type OperatorAuthorizationV1,
-} from "@ovrsr/fpp-protocol-core";
-import { CLASSIFICATION_IDS } from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-protocol-core";
+import { CLASSIFICATION_IDS } from "@fides-anima/fpp-enforcement-core";
 
 /** Allowed grant lifetimes (minutes). */
 export const TIMEFRAME_MINUTES = [10, 30, 60, 90] as const;

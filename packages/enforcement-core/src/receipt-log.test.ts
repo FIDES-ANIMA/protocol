@@ -2,7 +2,7 @@ import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DIGEST_DOMAINS, digest } from "@ovrsr/fpp-protocol-core";
+import { DIGEST_DOMAINS, digest } from "@fides-anima/fpp-protocol-core";
 import { createTempWorkspace } from "./test-helpers.js";
 import {
   loadReceiptSigner,

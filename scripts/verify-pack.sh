@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Verify that npm pack output includes compiled dist/ for protocol-core,
 # enforcement-core, trust-core, and both plugin packages. Enforces exact
-# @ovrsr/fpp-protocol-core pins and optionally installs plugin tarballs in
+# @fides-anima/fpp-protocol-core pins and optionally installs plugin tarballs in
 # isolation with --ignore-scripts.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,7 +12,7 @@ ROOT="$(dirname "$SCRIPT_DIR")"
 errors=0
 
 CORE_PKG="$ROOT/packages/protocol-core/package.json"
-CORE_NAME="@ovrsr/fpp-protocol-core"
+CORE_NAME="@fides-anima/fpp-protocol-core"
 CORE_VERSION="$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version" "$CORE_PKG" | tr -d '\r\n')"
 
 require_exact_core_dependency() {
@@ -20,7 +20,7 @@ require_exact_core_dependency() {
   local pinned
   pinned="$(node -p "
     const p=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
-    (p.dependencies && p.dependencies['@ovrsr/fpp-protocol-core']) || ''
+    (p.dependencies && p.dependencies['@fides-anima/fpp-protocol-core']) || ''
   " "$pkg_json" | tr -d '\r\n')"
   if [[ -z "$pinned" ]]; then
     echo "FAIL: $label missing dependency $CORE_NAME"
@@ -125,15 +125,15 @@ if [[ "${SKIP_ISOLATED_INSTALL:-}" != "1" ]]; then
       --package "$pkg" --destination "$TMP") >/dev/null
   done
 
-  for tgz in "$TMP"/ovrsr-openclaw-fpp-*.tgz; do
+  for tgz in "$TMP"/fides-anima-openclaw-fpp-*.tgz; do
     [[ -f "$tgz" ]] || continue
     base="$(basename "$tgz" .tgz)"
-    # Strip version suffix: ovrsr-openclaw-fpp-plugin-1.1.5 → ovrsr-openclaw-fpp-plugin
+    # Strip version suffix: fides-anima-openclaw-fpp-plugin-1.1.5 → fides-anima-openclaw-fpp-plugin
     name="$(echo "$base" | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+.*$//')"
-    expected="@ovrsr/fpp-protocol-core"
+    expected="@fides-anima/fpp-protocol-core"
     case "$name" in
-      *fpp-plugin) expected="@ovrsr/fpp-enforcement-core" ;;
-      *fpp-trust) expected="@ovrsr/fpp-trust-core" ;;
+      *fpp-plugin) expected="@fides-anima/fpp-enforcement-core" ;;
+      *fpp-trust) expected="@fides-anima/fpp-trust-core" ;;
     esac
 
     isol="$TMP/isol-$name"
@@ -149,7 +149,7 @@ if [[ "${SKIP_ISOLATED_INSTALL:-}" != "1" ]]; then
     # Import from inside the installed plugin package (OpenClaw load path)
     plugin_dir="$(cd "$isol" && node -e "
       const fs=require('fs');const path=require('path');
-      const scope=path.join('node_modules','@ovrsr');
+      const scope=path.join('node_modules','@fides-anima');
       for (const e of fs.readdirSync(scope)) {
         if (e.startsWith('openclaw-fpp-')) { process.stdout.write(path.join(scope,e)); break; }
       }

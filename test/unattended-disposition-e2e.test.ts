@@ -13,7 +13,7 @@ import {
   mandateSigningFields,
   signMessage,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 import {
   registerEnforcement,

@@ -4,4 +4,4 @@ export {
   verifyClaim,
   type ClaimVerification,
   type SignedClaim,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

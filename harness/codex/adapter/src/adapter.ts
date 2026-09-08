@@ -13,8 +13,8 @@ import {
   type EnforcementRuntime,
   type FppBeforeToolCallResult,
   type FppRuntimeAdapter,
-} from "@ovrsr/fpp-enforcement-core";
-import { resolveWorkspaceRoot } from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-enforcement-core";
+import { resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
 
 export const CODEX_HARNESS_ID = "codex" as const;
 export const CODEX_INTERCEPTION_STRATEGY = "codex-hooks-PreToolUse" as const;

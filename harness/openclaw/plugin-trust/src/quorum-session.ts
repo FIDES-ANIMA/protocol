@@ -12,4 +12,4 @@ export {
   type QuorumSessionManagerOptions,
   type QuorumSessionRecord,
   type QuorumStateFile,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

@@ -3,7 +3,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { AUTHZ } from "@ovrsr/fpp-protocol-core";
+import { AUTHZ } from "@fides-anima/fpp-protocol-core";
 import {
   AuthorizationService,
   StewardAuthorizationLedger,
@@ -13,7 +13,7 @@ import {
   type ActionDescriptor,
   type CandidateResult,
   type ConsumeResult,
-} from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-steward-auth-core";
 import type { LiveMandateCoverage } from "./disposition-engine.js";
 import {
   buildActionDescriptor,

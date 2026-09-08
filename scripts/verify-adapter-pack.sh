@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Isolated pack proof for harness adapters (unpublished @ovrsr/* bundled).
+# Isolated pack proof for adapters with registry-transition dependencies bundled.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -17,10 +17,10 @@ for adapter in cursor claude-code codex; do
   (cd "$ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
     --package "harness/$adapter/adapter" --destination "$TMP") >/dev/null
 
-  tgz="$(ls "$TMP"/ovrsr-fpp-adapter-"$adapter"-*.tgz 2>/dev/null | head -1)"
+  tgz="$(ls "$TMP"/fides-anima-fpp-adapter-"$adapter"-*.tgz 2>/dev/null | head -1)"
   if [[ -z "$tgz" ]]; then
     # claude-code package name uses the full slug
-    tgz="$(ls "$TMP"/ovrsr-fpp-adapter-*.tgz 2>/dev/null | grep -i "$adapter" | head -1 || true)"
+    tgz="$(ls "$TMP"/fides-anima-fpp-adapter-*.tgz 2>/dev/null | grep -i "$adapter" | head -1 || true)"
   fi
   if [[ -z "$tgz" || ! -f "$tgz" ]]; then
     echo "FAIL: no tarball for harness/$adapter/adapter"
@@ -39,13 +39,13 @@ for adapter in cursor claude-code codex; do
 
   plugin_dir="$(cd "$isol" && node -e "
     const fs=require('fs');const path=require('path');
-    const scope=path.join('node_modules','@ovrsr');
+    const scope=path.join('node_modules','@fides-anima');
     for (const e of fs.readdirSync(scope)) {
       if (e.startsWith('fpp-adapter-')) { process.stdout.write(path.join(scope,e)); break; }
     }
   ")"
   check_js="$isol/$plugin_dir/_isol_check.mjs"
-  printf "import('@ovrsr/fpp-enforcement-core').then(m=>{if(!m||typeof m!=='object')process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})\n" > "$check_js"
+  printf "import('@fides-anima/fpp-enforcement-core').then(m=>{if(!m||typeof m!=='object')process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})\n" > "$check_js"
   if (cd "$isol/$plugin_dir" && node "_isol_check.mjs"); then
     echo "PASS: isolated adapter install resolves enforcement-core for $adapter"
   else

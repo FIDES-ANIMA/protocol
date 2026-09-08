@@ -8,11 +8,11 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DIGEST_DOMAINS, digest } from "@ovrsr/fpp-protocol-core";
+import { DIGEST_DOMAINS, digest } from "@fides-anima/fpp-protocol-core";
 import type {
   DispositionDecision,
   GovernanceMode,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   CONSERVATIVE_STRICT_APPROVAL_ON,
   mergeConfig,

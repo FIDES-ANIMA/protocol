@@ -11,4 +11,4 @@ export {
   type TrustPropagation,
   type TrustRelationship,
   type TrustUpdateEvent,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

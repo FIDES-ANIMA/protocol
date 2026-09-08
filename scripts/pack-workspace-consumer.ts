@@ -4,7 +4,7 @@
  * `npm pack` inside an npm workspace silently omits workspace packages listed
  * in `bundledDependencies` (npm 10: bundled files: 0). Stage those packages
  * with bundle-workspace-deps, then pack from an isolated copy that is not a
- * workspace member so the tarball actually embeds node_modules/@ovrsr/*.
+ * workspace member so the tarball actually embeds node_modules/@fides-anima/*.
  *
  * Usage:
  *   npx tsx scripts/pack-workspace-consumer.ts --package harness/openclaw/plugin-trust --destination /tmp/out
@@ -101,8 +101,8 @@ export function listTarball(tgzPath: string): string {
 }
 
 function bundledNeedle(name: string): string {
-  const short = name.startsWith("@ovrsr/") ? name.slice("@ovrsr/".length) : name;
-  return `node_modules/@ovrsr/${short}/`;
+  const short = name.startsWith("@fides-anima/") ? name.slice("@fides-anima/".length) : name;
+  return `node_modules/@fides-anima/${short}/`;
 }
 
 function listingHasBundled(listing: string, name: string): boolean {
@@ -177,7 +177,7 @@ export function packedTarballName(pkg: {
 }
 
 /**
- * Pack a workspace consumer so bundled @ovrsr cores are inside the tarball.
+ * Pack a workspace consumer so bundled @fides-anima cores are inside the tarball.
  * Returns the absolute path of the produced .tgz.
  */
 export async function packWorkspaceConsumer(
@@ -191,13 +191,6 @@ export async function packWorkspaceConsumer(
 
   const destination = options.destination;
   mkdirSync(destination, { recursive: true });
-
-  if (!options.skipBundle) {
-    await bundleWorkspaceDeps({
-      repoRoot: options.repoRoot,
-      packageDir,
-    });
-  }
 
   const consumer = readJson(pkgPath);
   const bundled =
@@ -228,17 +221,24 @@ export async function packWorkspaceConsumer(
       throw new Error(`Failed to stage package.json for ${consumer.name}`);
     }
 
-    for (const name of bundled) {
-      const parts = name.startsWith("@") ? name.split("/") : [name];
-      const src = join(packageDir, "node_modules", ...parts);
-      if (!existsSync(join(src, "package.json"))) {
-        throw new Error(
-          `Staged ${name} missing at ${src} — run bundle:deps first`,
-        );
+    if (!options.skipBundle) {
+      await bundleWorkspaceDeps({
+        repoRoot: options.repoRoot,
+        packageDir: isol,
+      });
+    } else {
+      for (const name of bundled) {
+        const parts = name.startsWith("@") ? name.split("/") : [name];
+        const src = join(packageDir, "node_modules", ...parts);
+        if (!existsSync(join(src, "package.json"))) {
+          throw new Error(
+            `Staged ${name} missing at ${src} — run bundle:deps first`,
+          );
+        }
+        const dest = join(isol, "node_modules", ...parts);
+        mkdirSync(dirname(dest), { recursive: true });
+        cpSync(src, dest, { recursive: true });
       }
-      const dest = join(isol, "node_modules", ...parts);
-      mkdirSync(dirname(dest), { recursive: true });
-      cpSync(src, dest, { recursive: true });
     }
 
     const pack = runNpm(
@@ -266,7 +266,7 @@ export async function packWorkspaceConsumer(
     if (missing.length > 0) {
       const sample = listing
         .split(/\r?\n/)
-        .filter((l) => l.includes("node_modules/@ovrsr/"))
+        .filter((l) => l.includes("node_modules/@fides-anima/"))
         .slice(0, 20)
         .join("\n");
       throw new Error(

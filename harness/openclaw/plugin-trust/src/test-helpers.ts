@@ -9,4 +9,4 @@ export {
   type FakeClock,
   type HookCapture,
   type TempWorkspace,
-} from "@ovrsr/fpp-trust-core";
+} from "../../../../packages/trust-core/src/test-helpers.js";

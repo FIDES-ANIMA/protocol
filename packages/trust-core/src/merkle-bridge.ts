@@ -11,7 +11,7 @@ import {
   verifyMerkleProof,
   type MerkleProof,
   type MerkleProofStep,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 export {
   computeMerkleRoot,

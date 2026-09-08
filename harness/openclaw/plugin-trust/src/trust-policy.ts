@@ -6,4 +6,4 @@ export {
   type PolicyPolarity,
   type PolicyResult,
   type PolicySeverity,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

@@ -1,11 +1,11 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env node
 /**
  * Cursor / Claude-compatible PreToolUse hook CLI.
  * Reads JSON event from stdin; writes permission decision JSON to stdout.
  *
  * Usage (from repo root):
- *   npx tsx harness/cursor/adapter/src/hook-cli.ts
- *   npx tsx harness/cursor/adapter/src/hook-cli.ts --after
+ *   fpp-cursor-hook
+ *   fpp-cursor-hook --after
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -14,8 +14,8 @@ import { createCursorRuntime, handleCursorPreToolUse } from "./adapter.js";
 import {
   workspaceFile,
   resolveWorkspaceRoot,
-} from "@ovrsr/fpp-protocol-core";
-import { assertConfigPathAllowed } from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-protocol-core";
+import { assertConfigPathAllowed } from "@fides-anima/fpp-enforcement-core";
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];

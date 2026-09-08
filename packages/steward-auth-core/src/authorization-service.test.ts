@@ -9,7 +9,7 @@ import {
   mintStewardIdV1,
   type OperatorAuthorizationV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { AuthorizationService } from "./authorization-service.js";
 import { StewardAuthorizationLedger } from "./ledger.js";
 import { createOpenPgpBackend } from "./openpgp-backend.js";

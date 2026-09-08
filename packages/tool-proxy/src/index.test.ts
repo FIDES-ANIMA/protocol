@@ -12,13 +12,13 @@ import { sha512 } from "@noble/hashes/sha512";
 import {
   createEnforcementRuntime,
   MandateStore,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import {
   canonicalizeV2,
   mandateSigningFields,
   signMessage,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { createToolProxy, ToolProxyDeniedError } from "./index.js";
 
 ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m));

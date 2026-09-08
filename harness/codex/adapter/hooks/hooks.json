@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx harness/codex/adapter/src/hook-cli.ts",
+            "command": "npx --no-install fpp-codex-hook",
             "timeout": 30
           }
         ]

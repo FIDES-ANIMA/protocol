@@ -3,4 +3,4 @@ export {
   AuditCorruptionError,
   type EnforcementEvent,
   type EnforcementOutcome,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

@@ -71,7 +71,7 @@ describe("manifest / runtime default parity", () => {
 
   it("DEFAULT_CONFIG knownCustomTools is empty; runtime includes fpp.governance id", async () => {
     assert.deepEqual(DEFAULT_CONFIG.knownCustomTools, []);
-    const { CLASSIFICATION_IDS } = await import("@ovrsr/fpp-enforcement-core");
+    const { CLASSIFICATION_IDS } = await import("@fides-anima/fpp-enforcement-core");
     assert.ok(CLASSIFICATION_IDS.includes("fpp.governance"));
   });
 

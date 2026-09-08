@@ -23,7 +23,7 @@ import {
   signMessage,
   verifySignature,
   type GovernanceEventV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   GOVERNANCE_LEDGER_ZERO_HASH,
   GovernanceLedger,
@@ -102,7 +102,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const state = ledger.getLastState();
     assert.equal(state.ok, true);
@@ -121,7 +121,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
 
     const disabled = ledger.append({
@@ -166,7 +166,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const result = ledger.append({
       kind: "governance-disabled",
@@ -191,7 +191,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const state = ledger.getLastState();
     assert.equal(state.ok, false);
@@ -215,7 +215,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const append = ledger.append({
       kind: "governance-disabled",
@@ -240,7 +240,7 @@ describe("GovernanceLedger", () => {
         },
       },
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const append = ledger.append({
       kind: "governance-disabled",
@@ -258,7 +258,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const first = ledger.append({
       kind: "governance-disabled",
@@ -297,7 +297,7 @@ describe("GovernanceLedger", () => {
       ts: "2026-07-20T12:00:00.000Z",
       actor: { role: "operator", id: "op_local" },
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
       prevHash: GOVERNANCE_LEDGER_ZERO_HASH,
     };
     const impossibleFirstEvents = [
@@ -341,7 +341,7 @@ describe("GovernanceLedger", () => {
         signer,
         verifier,
         constitutionHash: CONSTITUTION,
-        policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+        policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
       });
       assert.equal(ledger.getLastState().ok, false);
     }
@@ -380,7 +380,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.equal(repeatedLedger.getLastState().ok, false);
   });
@@ -401,7 +401,7 @@ describe("GovernanceLedger", () => {
         signer,
         verifier,
         constitutionHash: CONSTITUTION,
-        policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+        policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
       });
       assert.equal(
         baseline.append({
@@ -417,7 +417,7 @@ describe("GovernanceLedger", () => {
         signer,
         verifier,
         constitutionHash: CONSTITUTION,
-        policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+        policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
         ioHooks: {
           [failure]: () => {
             throw new Error(`injected ${failure} failure`);
@@ -442,7 +442,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
       ioHooks: {
         beforeDirectoryFsync: () => {
           throw new Error("directory fsync unsupported");
@@ -474,7 +474,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     assert.equal(
       original.append({
@@ -490,7 +490,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: "aa".repeat(32),
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const constitutionReplay = wrongConstitution.getLastState();
     assert.equal(constitutionReplay.ok, false);
@@ -506,7 +506,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@9.9.9",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@9.9.9",
     });
     const policyReplay = wrongPolicy.getLastState();
     assert.equal(policyReplay.ok, false);
@@ -527,7 +527,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const state = ledger.getLastState();
     assert.equal(state.ok, false);
@@ -542,7 +542,7 @@ describe("GovernanceLedger", () => {
       signer,
       verifier,
       constitutionHash: CONSTITUTION,
-      policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+      policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     });
     const genesis = missing.getLastState();
     assert.equal(genesis.ok, true);

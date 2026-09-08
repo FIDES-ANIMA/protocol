@@ -67,7 +67,7 @@ describe("bundle-workspace-deps", () => {
     assert.equal(isExactVersion(">=1.0.0"), false);
   });
 
-  it("stages declared packages into consumer/node_modules/@ovrsr/...", async () => {
+  it("stages declared packages into consumer/node_modules/@fides-anima/...", async () => {
     const coreVer = (
       JSON.parse(
         readFileSync(join(root, "packages/protocol-core/package.json"), "utf8"),
@@ -75,8 +75,8 @@ describe("bundle-workspace-deps", () => {
     ).version;
     const consumer = join(tmp, "stage-ok");
     writeConsumer(consumer, {
-      deps: { "@ovrsr/fpp-protocol-core": coreVer },
-      bundled: ["@ovrsr/fpp-protocol-core"],
+      deps: { "@fides-anima/fpp-protocol-core": coreVer },
+      bundled: ["@fides-anima/fpp-protocol-core"],
     });
 
     const { bundleWorkspaceDeps } = await import("./bundle-workspace-deps.js");
@@ -88,21 +88,53 @@ describe("bundle-workspace-deps", () => {
     const staged = join(
       consumer,
       "node_modules",
-      "@ovrsr",
+      "@fides-anima",
       "fpp-protocol-core",
       "package.json",
     );
     assert.ok(existsSync(staged), `expected staged package at ${staged}`);
     const pkg = JSON.parse(readFileSync(staged, "utf8")) as { version: string; name: string };
-    assert.equal(pkg.name, "@ovrsr/fpp-protocol-core");
+    assert.equal(pkg.name, "@fides-anima/fpp-protocol-core");
     assert.equal(pkg.version, coreVer);
+    assert.equal(
+      existsSync(join(dirname(staged), "src", "index.test.ts")),
+      false,
+      "staged dependency must exclude source tests",
+    );
+  });
+
+  it("prunes source and compiled test helpers from staged dependencies", async () => {
+    const packageName = "@fides-anima/fpp-enforcement-core";
+    const version = (
+      JSON.parse(
+        readFileSync(join(root, "packages/enforcement-core/package.json"), "utf8"),
+      ) as { version: string }
+    ).version;
+    const consumer = join(tmp, "stage-no-test-helpers");
+    writeConsumer(consumer, {
+      deps: { [packageName]: version },
+      bundled: [packageName],
+    });
+
+    const { bundleWorkspaceDeps } = await import("./bundle-workspace-deps.js");
+    await bundleWorkspaceDeps({ repoRoot: root, packageDir: consumer });
+
+    const stagedRoot = join(
+      consumer,
+      "node_modules",
+      "@fides-anima",
+      "fpp-enforcement-core",
+    );
+    assert.equal(existsSync(join(stagedRoot, "src", "test-helpers.ts")), false);
+    assert.equal(existsSync(join(stagedRoot, "dist", "test-helpers.js")), false);
+    assert.equal(existsSync(join(stagedRoot, "dist", "test-helpers.d.ts")), false);
   });
 
   it("refuses version mismatch vs consumer dependencies pin", async () => {
     const consumer = join(tmp, "mismatch");
     writeConsumer(consumer, {
-      deps: { "@ovrsr/fpp-protocol-core": "9.9.9" },
-      bundled: ["@ovrsr/fpp-protocol-core"],
+      deps: { "@fides-anima/fpp-protocol-core": "9.9.9" },
+      bundled: ["@fides-anima/fpp-protocol-core"],
     });
 
     const { bundleWorkspaceDeps } = await import("./bundle-workspace-deps.js");
@@ -119,8 +151,8 @@ describe("bundle-workspace-deps", () => {
   it("refuses missing workspace package", async () => {
     const consumer = join(tmp, "missing");
     writeConsumer(consumer, {
-      deps: { "@ovrsr/fpp-does-not-exist": "1.0.0" },
-      bundled: ["@ovrsr/fpp-does-not-exist"],
+      deps: { "@fides-anima/fpp-does-not-exist": "1.0.0" },
+      bundled: ["@fides-anima/fpp-does-not-exist"],
     });
 
     const { bundleWorkspaceDeps } = await import("./bundle-workspace-deps.js");
@@ -137,8 +169,8 @@ describe("bundle-workspace-deps", () => {
   it("refuses range pins in consumer dependencies", async () => {
     const consumer = join(tmp, "range");
     writeConsumer(consumer, {
-      deps: { "@ovrsr/fpp-protocol-core": "^1.0.0" },
-      bundled: ["@ovrsr/fpp-protocol-core"],
+      deps: { "@fides-anima/fpp-protocol-core": "^1.0.0" },
+      bundled: ["@fides-anima/fpp-protocol-core"],
     });
 
     const { bundleWorkspaceDeps } = await import("./bundle-workspace-deps.js");

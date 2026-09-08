@@ -16,7 +16,7 @@ import {
   executeMandateSecond,
   type QuorumToolDependencies,
 } from "./tools.js";
-import type { StandingMandateV1 } from "@ovrsr/fpp-protocol-core";
+import type { StandingMandateV1 } from "@fides-anima/fpp-protocol-core";
 
 describe("quorum mandate tools", () => {
   const ws = createTempWorkspace("fpp-mandate-tools-");

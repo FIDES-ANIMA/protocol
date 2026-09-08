@@ -33,8 +33,8 @@ const unavailableLister = (): PluginListResult => ({ available: false });
 const bothInstalledLister = (): PluginListResult => ({
   available: true,
   stdout: JSON.stringify([
-    "@ovrsr/openclaw-fpp-plugin",
-    "@ovrsr/openclaw-fpp-trust",
+    "@fides-anima/openclaw-fpp-plugin",
+    "@fides-anima/openclaw-fpp-trust",
   ]),
 });
 

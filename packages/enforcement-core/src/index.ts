@@ -1,9 +1,9 @@
 /**
- * @ovrsr/fpp-enforcement-core — harness-agnostic enforcement engines
+ * @fides-anima/fpp-enforcement-core — harness-agnostic enforcement engines
  * for the Freedom Preserving Protocol.
  */
 
-export const PACKAGE_NAME = "@ovrsr/fpp-enforcement-core" as const;
+export const PACKAGE_NAME = "@fides-anima/fpp-enforcement-core" as const;
 export const PACKAGE_VERSION = "1.0.3" as const;
 
 export {

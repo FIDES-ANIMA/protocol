@@ -8,4 +8,4 @@ export {
   verifyReceiptSignatureLocal,
   type ReceiptEvidenceReport,
   type SignedReceiptLike,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

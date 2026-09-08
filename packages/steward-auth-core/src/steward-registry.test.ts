@@ -8,7 +8,7 @@ import {
   canonicalizeV2,
   mintStewardIdV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { StewardAuthorizationLedger } from "./ledger.js";
 import { createOpenPgpBackend } from "./openpgp-backend.js";
 import { createDefaultBackendRegistry } from "./signature-backend.js";

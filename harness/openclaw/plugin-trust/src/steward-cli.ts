@@ -19,7 +19,7 @@ import {
   type OperatorAuthorizationV1,
   type StewardBootstrapV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   AuthorizationService,
   StewardAuthorizationLedger,
@@ -27,7 +27,7 @@ import {
   StewardRegistry,
   createDefaultBackendRegistry,
   createOpenPgpBackend,
-} from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-steward-auth-core";
 import {
   LEGACY_TOFU_WARNING,
   assertLegacyTofuProfile,

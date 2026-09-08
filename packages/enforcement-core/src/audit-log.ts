@@ -20,7 +20,7 @@ import {
   mkdirSync,
 } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { hashEntryV1 as hashEntry } from "@ovrsr/fpp-protocol-core";
+import { hashEntryV1 as hashEntry } from "@fides-anima/fpp-protocol-core";
 
 const ZERO = "0".repeat(64);
 

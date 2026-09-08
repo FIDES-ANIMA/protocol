@@ -17,4 +17,4 @@ export {
   type TrustEventKind,
   type TrustEventPayload,
   type TrustSnapshotV2,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

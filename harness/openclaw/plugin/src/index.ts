@@ -1,5 +1,5 @@
 /**
- * index.ts — OpenClaw adapter over @ovrsr/fpp-enforcement-core.
+ * index.ts — OpenClaw adapter over @fides-anima/fpp-enforcement-core.
  *
  * Translates OpenClaw before_tool_call / after_tool_call hooks into the
  * harness-neutral FppRuntimeAdapter surface. Policy logic lives in core.
@@ -24,8 +24,8 @@ import {
   buildRuntimeManifest,
   signReceiptPayload,
   loadReceiptSigner,
-} from "@ovrsr/fpp-enforcement-core";
-import { DIGEST_DOMAINS, digest, resolveWorkspaceRoot } from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-enforcement-core";
+import { DIGEST_DOMAINS, digest, resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
 import { readOpenClawPackageBuild } from "./runtime-manifest.js";
 
 /** Process-local runtime (resettable in tests). */

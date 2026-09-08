@@ -17,7 +17,7 @@ import {
   type FreshnessEnvelope,
   type FreshnessPolicy,
   type TrustStateCapsuleV2,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";
 import type {

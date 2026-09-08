@@ -7,4 +7,4 @@ export {
   type MerkleProof,
   type MerkleProofStep,
   type TypedLogSource,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

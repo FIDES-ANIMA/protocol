@@ -25,7 +25,7 @@ import {
   deriveAgentIdV2,
   deriveLegacyAlias,
   verifySignature as verifySignatureCore,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m));
 

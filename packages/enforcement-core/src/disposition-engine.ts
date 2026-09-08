@@ -12,7 +12,7 @@ import {
   type AuthorizationClass,
   type DispositionDecision,
   type MandateIssuerClass,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { DispositionMode, FppPluginConfig } from "./config.js";
 import type { ClassificationResult } from "./risk-classifier.js";
 import { isReversibleClassification } from "./reversibility.js";

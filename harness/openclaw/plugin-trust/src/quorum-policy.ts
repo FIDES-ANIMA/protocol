@@ -10,4 +10,4 @@ export {
   type QuorumVoterRole,
   type ThresholdCheckInput,
   type ThresholdCheckResult,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

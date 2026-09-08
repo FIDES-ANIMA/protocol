@@ -8,7 +8,7 @@ some Codex runtimes. No FPP operator approval UI — unattended defaults only.
 ## Prerequisites
 
 - Node `>=22.19`
-- Clone of this repository **or** packed adapter tarball after `bundle:deps` / `prepack` (private; embeds unpublished `@ovrsr/*`)
+- Clone of this repository **or** a packed adapter tarball after `bundle:deps` / `prepack`; `@fides-anima/fpp-adapter-codex` is staged for public npm but has not completed its first publish
 - Codex CLI with hooks support (`~/.codex/hooks.json`)
 
 ## Install prompt layer
@@ -20,8 +20,9 @@ Install/copy the skill per AgentSkills / Codex skill docs. Expect partial
 
 ```bash
 cp harness/codex/adapter/hooks/hooks.json ~/.codex/hooks.json
-# Adjust the command path to your checkout of:
-#   npx tsx harness/codex/adapter/src/hook-cli.ts
+# Installed-package equivalent:
+# cp node_modules/@fides-anima/fpp-adapter-codex/hooks/hooks.json ~/.codex/hooks.json
+# The installed command is: npx --no-install fpp-codex-hook
 ```
 
 Codex may require trusting new hook definitions before they run. Prefer
@@ -62,4 +63,4 @@ npm run self-test
 - Adapter: `harness/codex/adapter/`
 - Matrix: `harness/shared/harness-capabilities.json`
 - Compatibility: `docs/COMPATIBILITY.md`
-- Shared proxy: `packages/tool-proxy/` (`@ovrsr/fpp-tool-proxy`)
+- Shared proxy: `packages/tool-proxy/` (`@fides-anima/fpp-tool-proxy`)

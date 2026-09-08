@@ -4,4 +4,4 @@ export {
   SELF_ASSERTED_CONFIGURATION_CEILING,
   trustLevelCeilingFromConfidence,
   type EvidenceClass,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

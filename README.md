@@ -2,16 +2,16 @@
 
 A modular constitutional framework for self-governing AI agents.
 
-**Current line** (local `package.json`): skill `1.3.9`, `@ovrsr/openclaw-fpp-plugin` `1.1.18`, `@ovrsr/openclaw-fpp-trust` `1.2.12`, `@ovrsr/fpp-protocol-core` `1.0.2`, `@ovrsr/fpp-enforcement-core` `1.0.3`, `@ovrsr/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
+**Current line** (local `package.json`): skill `1.3.9`, `@fides-anima/openclaw-fpp-plugin` `1.1.18`, `@fides-anima/openclaw-fpp-trust` `1.2.12`, `@fides-anima/fpp-protocol-core` `1.0.2`, `@fides-anima/fpp-enforcement-core` `1.0.3`, `@fides-anima/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
 
 | Layer | Artifact | What it does |
 |-------|----------|--------------|
 | Prompt | `freedom-preserving-protocol` (ClawHub, OpenClaw-only stage) | The agent reads SKILL.md, reasons about the five laws, and elects to adopt — including running a five-question test mentally before tool calls. |
-| Library cores | `@ovrsr/fpp-{protocol,enforcement,trust,steward-auth}-core` (git / bundled; **not** on npm) | Harness-agnostic schemas, classifier, disposition, mandates, receipts, trust stack. Plugins and adapters embed exact pins via `bundledDependencies`. |
-| Dispatcher | `@ovrsr/openclaw-fpp-plugin` (ClawHub) | OpenClaw enforcement: `before_tool_call` hook that can `block`, `requireApproval`, or abstain. Requires Gateway `>=2026.3.28`. |
-| Dispatcher | `@ovrsr/fpp-adapter-{cursor,claude-code,codex}` (GitHub only, `private`) | Graded PreToolUse-style hooks for Cursor / Claude Code / Codex. See `harness/<harness>/`. |
-| Shared proxy | `@ovrsr/fpp-tool-proxy` | MCP/sidecar interception when native hooks are missing or incomplete. |
-| Dispatcher | `@ovrsr/openclaw-fpp-trust` (ClawHub) | Trust: agent-to-agent trust graph, handshake, capsules — signature/config attestation, not behavioral compliance. Does **not** gate tool calls. |
+| Library cores | `@fides-anima/fpp-{protocol,enforcement,trust,steward-auth}-core` (public npm staging / bundled) | Harness-agnostic schemas, classifier, disposition, mandates, receipts, trust stack. Plugins and adapters embed exact pins via `bundledDependencies` during the registry transition. |
+| Dispatcher | `@fides-anima/openclaw-fpp-plugin` (ClawHub; public npm staging) | OpenClaw enforcement: `before_tool_call` hook that can `block`, `requireApproval`, or abstain. Requires Gateway `>=2026.3.28`. |
+| Dispatcher | `@fides-anima/fpp-adapter-{cursor,claude-code,codex}` (public npm staging) | Graded PreToolUse-style hooks for Cursor / Claude Code / Codex. See `harness/<harness>/`. |
+| Shared proxy | `@fides-anima/fpp-tool-proxy` (public npm staging) | MCP/sidecar interception when native hooks are missing or incomplete. |
+| Dispatcher | `@fides-anima/openclaw-fpp-trust` (ClawHub; public npm staging) | Trust: agent-to-agent trust graph, handshake, capsules — signature/config attestation, not behavioral compliance. Does **not** gate tool calls. |
 
 All layers compose but each is independently adoptable. The skill teaches *why* to comply; adapters/plugins gate a classified subset of tool calls and emit signed **conformance receipts**; the trust plugin exchanges fresh **trust-state capsules**.
 
@@ -43,7 +43,7 @@ openclaw plugins install clawhub:ovrsr/openclaw-fpp-plugin
 openclaw plugins install clawhub:ovrsr/openclaw-fpp-trust   # optional
 ```
 
-Plugin tarballs embed unpublished `@ovrsr/fpp-*-core` packages via `bundledDependencies` (cores are not on npm). If install fails resolving those packages, upgrade to a bundled release — see `docs/TROUBLESHOOTING.md`.
+Plugin tarballs continue to embed `@fides-anima/fpp-*-core` packages via `bundledDependencies` until the first public npm release is complete. If install fails resolving those packages, upgrade to a bundled release — see `docs/TROUBLESHOOTING.md`.
 
 Inspect enforcement:
 
@@ -55,7 +55,7 @@ openclaw plugins inspect openclaw-fpp-plugin --runtime --json
 
 ### Cursor / Claude Code / Codex (graded)
 
-Adapters are **not** in the ClawHub skill and are **not** published to npm (`private: true`). Clone this repository (or `npm pack` after `bundle:deps` / `prepack`) and follow the harness runbook. Do not merge hook fragments from a ClawHub skill install — there are none there.
+Adapters are **not** in the ClawHub skill. Their public npm manifests are staged under `@fides-anima`; until the first registry publish, clone this repository (or `npm pack` after `bundle:deps` / `prepack`) and follow the harness runbook. Do not merge hook fragments from a ClawHub skill install — there are none there.
 
 | Harness | Prompt skill | Hooks | Runbook | Verify |
 |---------|--------------|-------|---------|--------|
@@ -63,14 +63,17 @@ Adapters are **not** in the ClawHub skill and are **not** published to npm (`pri
 | Claude Code | `.claude/skills/` or `~/.claude/skills/` | Merge [`harness/claude-code/adapter/hooks/settings.fragment.json`](harness/claude-code/adapter/hooks/settings.fragment.json) into `.claude/settings.json` | [`harness/claude-code/runbook.md`](harness/claude-code/runbook.md) | `npm run verify-install -- --profile claude-code --json` |
 | Codex | AgentSkills / Codex skill docs (`trigger:` support is partial) | `cp harness/codex/adapter/hooks/hooks.json ~/.codex/hooks.json` | [`harness/codex/runbook.md`](harness/codex/runbook.md) | `npm run verify-install -- --profile codex --json` |
 
-Sample hook commands point at `npx tsx harness/<harness>/adapter/src/hook-cli.ts` — adjust the path to your checkout. Default workspaces are `~/.fpp/<profile>` (override with `FPP_WORKSPACE`). Optional `FPP_ENFORCEMENT_CONFIG` must stay inside that workspace root.
+Sample hook commands invoke the adapters' installed `fpp-*-hook` binaries
+through `npx --no-install`; no repository-relative TypeScript path is required.
+Default workspaces are `~/.fpp/<profile>` (override with `FPP_WORKSPACE`).
+Optional `FPP_ENFORCEMENT_CONFIG` must stay inside that workspace root.
 
 **Graded guarantees (not OpenClaw plugin parity):**
 
 - **Works:** native PreToolUse-style hooks drive enforcement-core dispositions (including unattended abstain/mandate paths) and receipts under the profile workspace.
 - **Does not claim:** gateway-non-bypassable binding, complete tool coverage on Codex (shell/Bash is the reliable path; `apply_patch` / some MCP tools have historically had gaps), or trust-plugin UI outside OpenClaw.
 - **Operator authority:** hooks can be disabled (Law 2). Claude Code `--dangerously-skip-permissions` bypasses hooks. Codex has no FPP approval UI (`require_approval` → deny).
-- **Fallback:** `@ovrsr/fpp-tool-proxy` for MCP/sidecar gateways when hooks are unavailable or incomplete.
+- **Fallback:** `@fides-anima/fpp-tool-proxy` for MCP/sidecar gateways when hooks are unavailable or incomplete.
 
 ### Hermes (prompt-layer only)
 
@@ -78,7 +81,7 @@ No dispatcher plugin. Do not install OpenClaw plugins into Hermes. See [`harness
 
 ### Library consumers (Node, no harness)
 
-Import `@ovrsr/fpp-enforcement-core` / `@ovrsr/fpp-trust-core` from a workspace clone. Cores are not on the public npm registry; published plugins embed them. Caller must wire `createEnforcementRuntime` / an adapter for mechanical gating.
+The cores are staged for public npm under `@fides-anima`, but have not been published from this repository yet. Until that first release, import `@fides-anima/fpp-enforcement-core` / `@fides-anima/fpp-trust-core` from a workspace clone or packed tarball. After publication, install them directly from npm. Callers must wire `createEnforcementRuntime` / an adapter for mechanical gating.
 
 ### Adopt safely
 
@@ -135,20 +138,20 @@ freedom-preserving-protocol/
 │   ├── README.md                  Harness index + graded-guarantee note
 │   ├── shared/prompt/             Canonical SKILL.md, hooks/, adoption/
 │   ├── shared/harness-capabilities.json
-│   ├── openclaw/plugin/           @ovrsr/openclaw-fpp-plugin
-│   ├── openclaw/plugin-trust/     @ovrsr/openclaw-fpp-trust
+│   ├── openclaw/plugin/           @fides-anima/openclaw-fpp-plugin
+│   ├── openclaw/plugin-trust/     @fides-anima/openclaw-fpp-trust
 │   ├── openclaw/skill/            ClawHub skill metadata + ALLOWLIST
 │   ├── openclaw/scripts/          stage-skill, skill-self-check, clawhub-publish
-│   ├── cursor/                    adapter + runbook (@ovrsr/fpp-adapter-cursor)
+│   ├── cursor/                    adapter + runbook (@fides-anima/fpp-adapter-cursor)
 │   ├── claude-code/               adapter + runbook
 │   ├── codex/                     adapter + runbook
 │   └── hermes/                    Prompt-layer runbook (no dispatcher plugin)
 ├── packages/
-│   ├── protocol-core/             @ovrsr/fpp-protocol-core
-│   ├── enforcement-core/          @ovrsr/fpp-enforcement-core
-│   ├── trust-core/                @ovrsr/fpp-trust-core
-│   ├── steward-auth-core/         @ovrsr/fpp-steward-auth-core
-│   ├── tool-proxy/                @ovrsr/fpp-tool-proxy
+│   ├── protocol-core/             @fides-anima/fpp-protocol-core
+│   ├── enforcement-core/          @fides-anima/fpp-enforcement-core
+│   ├── trust-core/                @fides-anima/fpp-trust-core
+│   ├── steward-auth-core/         @fides-anima/fpp-steward-auth-core
+│   ├── tool-proxy/                @fides-anima/fpp-tool-proxy
 │   └── gateway-reference/         CI-only stub; not a production gateway
 ├── scripts/                       Shared verify/adopt/audit tooling
 ├── test/                          Cross-harness e2e tests
@@ -205,7 +208,7 @@ npm run verify:all
 
 That runs constitution verification, classifier fixtures, core build, typecheck (cores + adapters + plugins), `npm run test:all` (workspace tests, scripts, interop, corpus, e2e, self-test), and package dry-run (`scripts/verify-pack.sh`). Runtime pin: `.node-version` (`22.19`); root and both plugins require Node `>=22.19`. OpenClaw plugins require Gateway `>=2026.3.28`.
 
-Coverage: `npm run test:coverage` enforces floor thresholds in `harness/openclaw/plugin/.c8rc.json` and `harness/openclaw/plugin-trust/.c8rc.json` (measured from the 2026-07-10 baseline; trust branch/function floors re-measured 2026-07-19 after core extraction). Compatibility re-export shims that only forward `@ovrsr/fpp-*-core` are excluded — their logic is covered in the core packages. Raise thresholds only after new tests lift the measured floor — never lower them to hide regressions.
+Coverage: `npm run test:coverage` enforces floor thresholds in `harness/openclaw/plugin/.c8rc.json` and `harness/openclaw/plugin-trust/.c8rc.json` (measured from the 2026-07-10 baseline; trust branch/function floors re-measured 2026-07-19 after core extraction). Compatibility re-export shims that only forward `@fides-anima/fpp-*-core` are excluded — their logic is covered in the core packages. Raise thresholds only after new tests lift the measured floor — never lower them to hide regressions.
 
 ## Signing (for maintainers)
 
@@ -254,6 +257,6 @@ This is the third entrant: substantive laws + prompt-layer adoption ritual + rea
 This repository is licensed under the Humanitarian Use License v1.0 (see [LICENSE](LICENSE)).
 
 - **Skill bundle on ClawHub** — distributed under MIT-0 per ClawHub policy. Anyone may use, modify, and redistribute the published skill without attribution.
-- **Plugins (`@ovrsr/openclaw-fpp-plugin`, `@ovrsr/openclaw-fpp-trust`)** — distributed under the Humanitarian Use License v1.0. See `harness/openclaw/plugin/LICENSE` and `harness/openclaw/plugin-trust/LICENSE`.
-- **Library cores and git-only adapters** — Humanitarian Use License v1.0 in this repo; cores are not published to npm.
+- **Plugins (`@fides-anima/openclaw-fpp-plugin`, `@fides-anima/openclaw-fpp-trust`)** — distributed under the Humanitarian Use License v1.0. See `harness/openclaw/plugin/LICENSE` and `harness/openclaw/plugin-trust/LICENSE`.
+- **Library cores, tool proxy, adapters, and plugins** — staged for public npm under the Humanitarian Use License v1.0. No live npm publish is performed by the staging workflow.
 - **GitHub repo** — Humanitarian Use License v1.0 governs clones and forks.

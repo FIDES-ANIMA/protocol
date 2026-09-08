@@ -30,7 +30,7 @@ import {
   type LegacyConstitutionalClaimV1,
   buildReplayKey,
   validateFreshness,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { ReplayCache } from "./replay-cache.js";
 import {
   EVIDENCE_CLASS_CEILINGS,

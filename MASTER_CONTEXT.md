@@ -167,13 +167,13 @@ context.
 ```
 freedom-preserving-protocol/
 ├── harness/shared/prompt/SKILL.md Prompt-layer skill (the agent reads it, may adopt)
-├── packages/protocol-core/        @ovrsr/fpp-protocol-core (schemas, workspace profiles)
-├── packages/enforcement-core/     @ovrsr/fpp-enforcement-core (classifier, disposition)
-├── packages/trust-core/           @ovrsr/fpp-trust-core (trust stack, createTrustStack)
-├── packages/tool-proxy/           @ovrsr/fpp-tool-proxy (MCP/sidecar reference)
+├── packages/protocol-core/        @fides-anima/fpp-protocol-core (schemas, workspace profiles)
+├── packages/enforcement-core/     @fides-anima/fpp-enforcement-core (classifier, disposition)
+├── packages/trust-core/           @fides-anima/fpp-trust-core (trust stack, createTrustStack)
+├── packages/tool-proxy/           @fides-anima/fpp-tool-proxy (MCP/sidecar reference)
 ├── harness/<name>/adapter/        Cursor / Claude Code / Codex FppRuntimeAdapter packages
-├── harness/openclaw/plugin/       @ovrsr/openclaw-fpp-plugin (OpenClaw enforcement adapter)
-└── harness/openclaw/plugin-trust/ @ovrsr/openclaw-fpp-trust (OpenClaw trust adapter)
+├── harness/openclaw/plugin/       @fides-anima/openclaw-fpp-plugin (OpenClaw enforcement adapter)
+└── harness/openclaw/plugin-trust/ @fides-anima/openclaw-fpp-trust (OpenClaw trust adapter)
 ```
 
 | Artifact | Layer | What it does | Bypass surface |
@@ -538,8 +538,8 @@ The items below are consolidated, with prerequisites and ownership, in
 - `harness/shared/prompt/hooks/` — prompt-layer sub-skills (`pre-action-check`,
   `constitution-audit`) — these are reasoning routines, not executable hooks.
 - `scripts/` — sign/verify/adopt/revoke/audit utilities (TypeScript via tsx).
-- `harness/openclaw/plugin/` — enforcement plugin (`@ovrsr/openclaw-fpp-plugin`).
-- `harness/openclaw/plugin-trust/` — trust plugin (`@ovrsr/openclaw-fpp-trust`).
+- `harness/openclaw/plugin/` — enforcement plugin (`@fides-anima/openclaw-fpp-plugin`).
+- `harness/openclaw/plugin-trust/` — trust plugin (`@fides-anima/openclaw-fpp-trust`).
 - `harness/openclaw/skill/` — ClawHub skill metadata + ALLOWLIST.
 - `harness/openclaw/scripts/` — stage-skill, skill-self-check, clawhub-publish.
 - `harness/<name>/adapter/` — Cursor / Claude Code / Codex hook adapters.

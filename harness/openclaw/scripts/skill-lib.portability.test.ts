@@ -26,9 +26,9 @@ describe("skill-lib portability", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  it("hashEntryV1 matches @ovrsr/fpp-protocol-core for a golden entry", async () => {
+  it("hashEntryV1 matches @fides-anima/fpp-protocol-core for a golden entry", async () => {
     const skill = await import("../../../scripts/skill-lib/index.js");
-    const core = await import("@ovrsr/fpp-protocol-core");
+    const core = await import("@fides-anima/fpp-protocol-core");
     const entry = {
       previousHash: "0".repeat(64),
       timestamp: "2026-07-15T00:00:00.000Z",

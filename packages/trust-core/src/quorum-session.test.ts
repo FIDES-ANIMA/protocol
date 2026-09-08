@@ -9,7 +9,7 @@ import {
   parseStandingMandate,
   verifyMandateSignature,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { createTempWorkspace, createFakeClock } from "./test-helpers.js";
 import { loadOrCreateIdentity } from "./identity.js";
 import { KeyLifecycleLedger } from "./key-lifecycle.js";

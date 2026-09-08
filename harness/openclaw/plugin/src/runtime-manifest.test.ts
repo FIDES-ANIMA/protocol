@@ -9,7 +9,7 @@ import {
 describe("OpenClaw runtime-manifest adapter", () => {
   it("readOpenClawPackageBuild binds plugin package identity", () => {
     const build = readOpenClawPackageBuild();
-    assert.equal(build.name, "@ovrsr/openclaw-fpp-plugin");
+    assert.equal(build.name, "@fides-anima/openclaw-fpp-plugin");
     assert.match(build.version, /^\d+\.\d+\.\d+/);
     assert.notEqual(build.pluginApi, "unknown");
   });

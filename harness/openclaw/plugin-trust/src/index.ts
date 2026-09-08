@@ -1,9 +1,9 @@
 /**
- * index.ts — OpenClaw adapter over @ovrsr/fpp-trust-core.
+ * index.ts — OpenClaw adapter over @fides-anima/fpp-trust-core.
  *
  * Uses defineToolPlugin so the SDK automatically wires tool discovery,
  * tool-search metadata, and registrationMode gating. Trust logic lives in
- * @ovrsr/fpp-trust-core; this file translates OpenClaw hooks/tools/CLI.
+ * @fides-anima/fpp-trust-core; this file translates OpenClaw hooks/tools/CLI.
  */
 
 import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
@@ -13,11 +13,11 @@ import {
   createTrustStack,
   saveTrustGraph,
   saveTrustGraphSync,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 import {
   workspaceFile,
   absolutizeWorkspacePath,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { registerFppTrustCli, FPP_TRUST_CLI_DESCRIPTORS } from "./cli.js";
 import type { ToolDependencies } from "./tools.js";
 import {
@@ -121,7 +121,7 @@ export {
   type TrustStack,
   type FppTrustConfig,
   type TrustConfigDiagnostic,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 
 const DEBOUNCE_MS = 500;
 

@@ -3,7 +3,7 @@
  * for the Freedom Preserving Protocol.
  */
 
-export const PACKAGE_NAME = "@ovrsr/fpp-steward-auth-core" as const;
+export const PACKAGE_NAME = "@fides-anima/fpp-steward-auth-core" as const;
 export const PACKAGE_VERSION = "0.1.0" as const;
 
 export {

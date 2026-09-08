@@ -12,8 +12,8 @@ import {
   type EnforcementRuntime,
   type FppBeforeToolCallResult,
   type FppRuntimeAdapter,
-} from "@ovrsr/fpp-enforcement-core";
-import { resolveWorkspaceRoot } from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-enforcement-core";
+import { resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
 
 export const CLAUDE_CODE_HARNESS_ID = "claude-code" as const;
 export const CLAUDE_CODE_INTERCEPTION_STRATEGY =

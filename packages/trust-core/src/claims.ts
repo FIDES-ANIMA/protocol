@@ -10,7 +10,7 @@ import {
   KEY_ALGORITHM,
   canonicalize,
   publicKeyMatchesAgentId,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";
 import type { ConstitutionalClaim } from "./handshake.js";

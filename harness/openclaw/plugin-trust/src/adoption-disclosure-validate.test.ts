@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { loadOrCreateIdentity } from "@ovrsr/fpp-trust-core";
+import { loadOrCreateIdentity } from "@fides-anima/fpp-trust-core";
 import {
   buildTrustStateCapsule,
   validateCapsuleWithAdoptionDisclosure,

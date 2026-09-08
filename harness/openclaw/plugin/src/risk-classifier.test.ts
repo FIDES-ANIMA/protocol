@@ -1,6 +1,6 @@
 /**
  * Approval UI string length constraints (OpenClaw gateway limits).
- * Classifier logic lives in @ovrsr/fpp-enforcement-core.
+ * Classifier logic lives in @fides-anima/fpp-enforcement-core.
  */
 
 import { strict as assert } from "node:assert";

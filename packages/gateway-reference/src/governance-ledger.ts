@@ -26,7 +26,7 @@ import {
   type GovernanceEventV1,
   type GovernanceMode,
   type GovernanceStateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 export const GOVERNANCE_LEDGER_ZERO_HASH = "0".repeat(64);
 

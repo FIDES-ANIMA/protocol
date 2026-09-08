@@ -2,7 +2,7 @@
  * Harness-agnostic trust stack factory — graph, handshake, identity, quorum.
  */
 
-import { workspaceFile, absolutizeWorkspacePath } from "@ovrsr/fpp-protocol-core";
+import { workspaceFile, absolutizeWorkspacePath } from "@fides-anima/fpp-protocol-core";
 import { TrustGraphProtocol, TrustLevel } from "./trust-graph.js";
 import { ConstitutionalHandshake } from "./handshake.js";
 import { loadTrustGraph } from "./persistence.js";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import * as openpgp from "openpgp";
-import { canonicalizeV2 } from "@ovrsr/fpp-protocol-core";
+import { canonicalizeV2 } from "@fides-anima/fpp-protocol-core";
 import {
   SignatureBackendRegistry,
   createDefaultBackendRegistry,

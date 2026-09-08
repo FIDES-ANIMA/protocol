@@ -14,7 +14,7 @@ import type { ClassificationId } from "./risk-classifier.js";
 import {
   workspaceFile,
   absolutizeWorkspacePath,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 /**
  * Conservative strict-mode approval overrides used when the shared

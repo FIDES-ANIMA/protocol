@@ -3,7 +3,7 @@
  * Original evidence is never rewritten; status attaches via new records.
  */
 
-import { canonicalize } from "@ovrsr/fpp-protocol-core";
+import { canonicalize } from "@fides-anima/fpp-protocol-core";
 import { createHash, randomBytes } from "node:crypto";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";

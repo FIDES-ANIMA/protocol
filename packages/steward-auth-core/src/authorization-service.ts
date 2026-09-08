@@ -9,7 +9,7 @@ import {
   parseOperatorAuthorizationRevocation,
   type OperatorAuthorizationRevocationV1,
   type OperatorAuthorizationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { StewardAuthorizationLedger } from "./ledger.js";
 import type { SignatureBackendRegistry } from "./signature-backend.js";
 import type { StewardRegistry } from "./steward-registry.js";

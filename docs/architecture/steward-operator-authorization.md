@@ -2,7 +2,7 @@
 
 **Status:** PARTIAL (local OpenClaw path + library core + repository-proven `apply_patch` descriptor coverage; live-gateway consumption of a published artifact is a separate post-release check)
 **Plan:** `docs/plans/2026-07-18-steward-operator-authorization.md` (COMPLETE); live payload/path coverage `docs/plans/2026-07-18-apply-patch-live-coverage.md`; required-only consumption `docs/plans/2026-07-19-operator-authorization-required-consumption.md`
-**Packages:** `@ovrsr/fpp-protocol-core` (contracts), `@ovrsr/fpp-steward-auth-core` (OpenPGP + ledger), `@ovrsr/fpp-enforcement-core` (coverage seam), `@ovrsr/openclaw-fpp-trust` (CLI), `@ovrsr/openclaw-fpp-plugin` (OpenClaw adapter)
+**Packages:** `@fides-anima/fpp-protocol-core` (contracts), `@fides-anima/fpp-steward-auth-core` (OpenPGP + ledger), `@fides-anima/fpp-enforcement-core` (coverage seam), `@fides-anima/openclaw-fpp-trust` (CLI), `@fides-anima/openclaw-fpp-plugin` (OpenClaw adapter)
 
 ## What this is
 
@@ -101,7 +101,7 @@ Replace `<absolute-path-to-openclaw-json>` with the host's real absolute path (f
 
 - After changing `openclaw.plugin.json` schema fields, perform a **full gateway process restart**. Hot reload does not refresh the cached manifest schema.
 - Do **not** add top-level `await` to the OpenClaw plugin entry module. The gateway loader can reject the file and leave the enforcement hook unregistered (total bypass window).
-- `packageBuildHash` / `implementationVersion` identify package **metadata**, not source bytes. To prove a release embeds the live-payload fix, inspect the packed plugin's nested `@ovrsr/fpp-enforcement-core/dist/action-descriptor.js` (or run `harness/openclaw/plugin/pack-bundle.test.ts`).
+- `packageBuildHash` / `implementationVersion` identify package **metadata**, not source bytes. To prove a release embeds the live-payload fix, inspect the packed plugin's nested `@fides-anima/fpp-enforcement-core/dist/action-descriptor.js` (or run `harness/openclaw/plugin/pack-bundle.test.ts`).
 
 ### Tracked follow-up (not implemented here)
 

@@ -9,8 +9,8 @@ import * as openpgp from "openpgp";
 import {
   canonicalizeV2,
   parseStewardBootstrap,
-} from "@ovrsr/fpp-protocol-core";
-import { StewardAuthorizationLedger } from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-protocol-core";
+import { StewardAuthorizationLedger } from "@fides-anima/fpp-steward-auth-core";
 import { createTempWorkspace } from "./test-helpers.js";
 import { loadOrCreateIdentity } from "./identity.js";
 import { TrustGraphProtocol } from "./trust-graph.js";

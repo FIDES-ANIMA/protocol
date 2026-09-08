@@ -6,7 +6,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize } from "@ovrsr/fpp-protocol-core";
+import { canonicalize } from "@fides-anima/fpp-protocol-core";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";
 import type { TrustNode, TrustRelationship } from "./trust-graph.js";

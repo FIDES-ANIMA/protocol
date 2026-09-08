@@ -7,7 +7,7 @@
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { DIGEST_DOMAINS, canonicalizeV2, digest } from "@ovrsr/fpp-protocol-core";
+import { DIGEST_DOMAINS, canonicalizeV2, digest } from "@fides-anima/fpp-protocol-core";
 
 export const RELEASE_SIGNING_DOMAIN = "fpp:v2:release-manifest" as const;
 

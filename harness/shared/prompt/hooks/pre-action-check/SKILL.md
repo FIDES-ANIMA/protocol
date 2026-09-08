@@ -13,7 +13,7 @@ tags:
 
 > **What this is.** A reasoning routine for the model to run inside its own context window before tool calls. **It is not an executable OpenClaw hook.** `openclaw hooks list` and `openclaw plugins list` will not show it, because it is not registered with the dispatcher.
 >
-> **What enforces tool calls at the dispatcher layer.** If you (or your user) want a real `before_tool_call` hook that can `block` or `requireApproval` regardless of what the agent's context says, install the companion plugin `@ovrsr/openclaw-fpp-plugin`. See the [plugin README](https://github.com/ovrsr/freedom-preserving-protocol/blob/main/harness/openclaw/plugin/README.md).
+> **What enforces tool calls at the dispatcher layer.** If you (or your user) want a real `before_tool_call` hook that can `block` or `requireApproval` regardless of what the agent's context says, install the companion plugin `@fides-anima/openclaw-fpp-plugin`. See the [plugin README](https://github.com/ovrsr/freedom-preserving-protocol/blob/main/harness/openclaw/plugin/README.md).
 >
 > **Why ship both layers.** Prompt-layer governance is fast, model-native, and works inside any AgentSkills-compliant runtime (OpenClaw, Claude Code, Cursor, Codex, …). Dispatcher-layer governance is slower to install, OpenClaw-specific, and meaningfully stronger. They complement each other: the skill teaches you to want to comply; the plugin makes compliance hard to bypass.
 
@@ -78,4 +78,4 @@ Each time the check causes you to abstain, escalate, or invoke the meta-clause, 
 2. Increment the corresponding counter in your in-context audit summary.
 3. On the next constitution-audit heartbeat (`../constitution-audit/SKILL.md`), include those counters in the hash-chained audit entry.
 
-The companion plugin (`@ovrsr/openclaw-fpp-plugin`) writes its own enforcement events to a parallel audit file (`.openclaw/workspace/fpp-plugin-audit.jsonl`). If both layers are active, an audit-verify script can cross-check them — a discrepancy between "what the model says happened" and "what the dispatcher saw happen" is itself useful signal.
+The companion plugin (`@fides-anima/openclaw-fpp-plugin`) writes its own enforcement events to a parallel audit file (`.openclaw/workspace/fpp-plugin-audit.jsonl`). If both layers are active, an audit-verify script can cross-check them — a discrepancy between "what the model says happened" and "what the dispatcher saw happen" is itself useful signal.

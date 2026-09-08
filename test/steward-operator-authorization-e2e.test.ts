@@ -14,7 +14,7 @@ import {
   type OperatorAuthorizationV1,
   type StewardBootstrapV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   AuthorizationService,
   StewardAuthorizationLedger,
@@ -23,11 +23,11 @@ import {
   createDefaultBackendRegistry,
   createOpenPgpBackend,
   PACKAGE_NAME as STEWARD_PKG,
-} from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-steward-auth-core";
 import {
   createEnforcementRuntime,
   type FppRuntimeAdapter,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import { registerStewardCli } from "../harness/openclaw/plugin-trust/src/steward-cli.js";
 
 type FakeStewardCommand = {
@@ -119,7 +119,7 @@ async function signCleartext(payload: object, key: openpgp.PrivateKey) {
 
 describe("steward operator authorization E2E", () => {
   it("exports steward-auth-core without openclaw dependency", () => {
-    assert.equal(STEWARD_PKG, "@ovrsr/fpp-steward-auth-core");
+    assert.equal(STEWARD_PKG, "@fides-anima/fpp-steward-auth-core");
     const pkg = JSON.parse(
       readFileSync(
         join(process.cwd(), "packages/steward-auth-core/package.json"),

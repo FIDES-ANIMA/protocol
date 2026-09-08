@@ -8,14 +8,14 @@ import {
   mintStewardIdV1,
   type OperatorAuthorizationV1,
   type StewardKeyAttestationV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   AuthorizationService,
   StewardAuthorizationLedger,
   StewardRegistry,
   createDefaultBackendRegistry,
   createOpenPgpBackend,
-} from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-steward-auth-core";
 import {
   createEnforcementRuntime,
   type FppRuntimeAdapter,

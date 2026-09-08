@@ -4,4 +4,4 @@ export {
   verifyReceiptSignature,
   type ReceiptSigner,
   type SignedReceipt,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

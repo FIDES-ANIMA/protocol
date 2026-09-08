@@ -9,7 +9,7 @@ import {
   emergencyOverrideSigningFields,
   signMessage,
   type SignedEmergencyOverrideV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   createEnforcementRuntime,
   type FppRuntimeAdapter,

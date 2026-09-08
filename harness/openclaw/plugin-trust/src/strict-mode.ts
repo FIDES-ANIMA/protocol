@@ -9,4 +9,4 @@ export {
   type StrictModeDiagnosticHandler,
   type StrictModeState,
   type StrictSessionEntry,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

@@ -1,6 +1,6 @@
 /**
  * Skill-portable protocol helpers used by adopt / revoke / audit scripts.
- * Keep hashEntryV1 and merkle pairing bit-compatible with @ovrsr/fpp-protocol-core.
+ * Keep hashEntryV1 and merkle pairing bit-compatible with @fides-anima/fpp-protocol-core.
  */
 export {
   canonicalizeV1,

@@ -1,5 +1,5 @@
 {
-  "name": "@ovrsr/fpp-trust-core",
+  "name": "@fides-anima/fpp-trust-core",
   "version": "1.0.2",
   "description": "Harness-agnostic trust graph and handshake stack for the Freedom Preserving Protocol",
   "type": "module",
@@ -7,7 +7,7 @@
   "author": "ovrsr",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ovrsr/freedom-preserving-protocol",
+    "url": "git+https://github.com/ovrsr/freedom-preserving-protocol.git",
     "directory": "packages/trust-core"
   },
   "main": "./dist/index.js",
@@ -20,9 +20,13 @@
   },
   "files": [
     "dist/",
+    "!dist/test-helpers.*",
     "src/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "constitution.json",
+    "constitution.yaml",
+    "SKILL.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -33,7 +37,7 @@
   "dependencies": {
     "@noble/ed25519": "^2.1.0",
     "@noble/hashes": "^1.4.0",
-    "@ovrsr/fpp-protocol-core": "1.0.2",
+    "@fides-anima/fpp-protocol-core": "1.0.2",
     "@sinclair/typebox": "^0.34.0"
   },
   "devDependencies": {
@@ -43,5 +47,12 @@
   },
   "engines": {
     "node": ">=22.19"
+  },
+  "homepage": "https://github.com/ovrsr/freedom-preserving-protocol#readme",
+  "bugs": {
+    "url": "https://github.com/ovrsr/freedom-preserving-protocol/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

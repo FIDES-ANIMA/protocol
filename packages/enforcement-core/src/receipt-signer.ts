@@ -28,7 +28,7 @@ import {
   signMessage,
   verifySignature,
   type ConformanceReceiptV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m));
 

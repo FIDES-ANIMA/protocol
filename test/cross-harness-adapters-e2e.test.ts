@@ -12,13 +12,13 @@ import { sha512 } from "@noble/hashes/sha512";
 import {
   MandateStore,
   type EnforcementRuntime,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import {
   canonicalizeV2,
   mandateSigningFields,
   signMessage,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { createCursorRuntime, handleCursorPreToolUse } from "../harness/cursor/adapter/src/adapter.ts";
 import {
   createClaudeCodeRuntime,

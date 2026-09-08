@@ -18,7 +18,7 @@ import {
   writeSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { digest } from "@ovrsr/fpp-protocol-core";
+import { digest } from "@fides-anima/fpp-protocol-core";
 
 export const STEWARD_LEDGER_ZERO_HASH = "0".repeat(64);
 export const STEWARD_LEDGER_SCHEMA_VERSION = 1 as const;

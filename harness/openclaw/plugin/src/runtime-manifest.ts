@@ -1,6 +1,6 @@
 /**
  * OpenClaw adapter: bind plugin package.json identity into the shared
- * runtime manifest builder from @ovrsr/fpp-enforcement-core.
+ * runtime manifest builder from @fides-anima/fpp-enforcement-core.
  */
 
 import { readFileSync } from "node:fs";
@@ -14,7 +14,7 @@ import {
   type FppPluginConfig,
   type PackageBuildInput,
   type RuntimeManifest,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 
 export {
   computeClassifierRulesetHash,
@@ -22,7 +22,7 @@ export {
   computePackageBuildHash,
   type PackageBuildInput,
   type RuntimeManifest,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

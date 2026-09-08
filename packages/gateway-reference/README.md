@@ -1,4 +1,4 @@
-# @ovrsr/fpp-gateway-reference
+# @fides-anima/fpp-gateway-reference
 
 **Not a production gateway. Not an OpenClaw plugin. Not upstream enforcement.**
 
@@ -19,8 +19,8 @@ on Windows/filesystems that do not support them.
 ## Focused verification
 
 ```bash
-npm test -w @ovrsr/fpp-gateway-reference
-npm run typecheck -w @ovrsr/fpp-gateway-reference
+npm test -w @fides-anima/fpp-gateway-reference
+npm run typecheck -w @fides-anima/fpp-gateway-reference
 ```
 
 ## Minimal usage (CI demos only)
@@ -29,8 +29,8 @@ npm run typecheck -w @ovrsr/fpp-gateway-reference
 import {
   createGatewayReferenceRouter,
   GovernanceLedger,
-} from "@ovrsr/fpp-gateway-reference";
-import { createEnforcementRuntime } from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-gateway-reference";
+import { createEnforcementRuntime } from "@fides-anima/fpp-enforcement-core";
 
 const runtime = createEnforcementRuntime(config, adapter);
 const ledger = new GovernanceLedger({

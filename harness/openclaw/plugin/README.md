@@ -1,4 +1,4 @@
-# `@ovrsr/openclaw-fpp-plugin`
+# `@fides-anima/openclaw-fpp-plugin`
 
 The dispatcher-layer companion to the
 [`freedom-preserving-protocol`](../../shared/prompt/SKILL.md) skill.
@@ -16,6 +16,8 @@ Install this plugin if any of the following apply:
 Do *not* install this if your runtime is not OpenClaw — the plugin uses OpenClaw's plugin SDK and will not load in Claude Code / Cursor / Codex.
 
 ## Install
+
+ClawHub remains the supported OpenClaw install channel. The package manifest is also staged for public npm as `@fides-anima/openclaw-fpp-plugin`, but this repository has not performed that first npm publish.
 
 ```bash
 openclaw plugins install clawhub:ovrsr/openclaw-fpp-plugin
@@ -151,7 +153,7 @@ The published artifact ships pre-built `dist/`. Source is included in the npm ta
 4. **No cross-agent enforcement.** Sub-agents spawned via `sessions_spawn` inherit your config only if they share the same gateway. Sub-agents on remote hosts must install their own copy.
 5. **The classifier ships with English-language patterns.** Shell commands with non-Latin encoding (e.g., a path with unicode lookalike characters) may evade the protected-path check. The plugin is best-effort, not adversarial-strength, for these edge cases.
 6. **Never add top-level `await` to the plugin entry.** The OpenClaw gateway loader can reject the module and leave `before_tool_call` unregistered, creating a total enforcement bypass until fixed and restarted.
-7. **`packageBuildHash` is metadata-derived.** Receipt fields identify package name/version/API vectors, not a digest of `action-descriptor.js`. Confirm release provenance by inspecting the packed nested `@ovrsr/fpp-enforcement-core` artifact.
+7. **`packageBuildHash` is metadata-derived.** Receipt fields identify package name/version/API vectors, not a digest of `action-descriptor.js`. Confirm release provenance by inspecting the packed nested `@fides-anima/fpp-enforcement-core` artifact.
 
 ## Relationship to the parent skill
 

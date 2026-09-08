@@ -4,4 +4,4 @@ export {
   type ClassificationId,
   type ClassificationResult,
   type Decision,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

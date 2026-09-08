@@ -7,8 +7,8 @@
 - Source: `ovrsr/freedom-preserving-protocol`
 - Layer in effect (check all that apply):
   - [x] Prompt-layer (this skill — `SKILL.md` reasoning)
-  - [ ] Dispatcher-layer, enforcement (`@ovrsr/openclaw-fpp-plugin` — `before_tool_call` hook)
-  - [ ] Dispatcher-layer, trust (`@ovrsr/openclaw-fpp-trust` — handshake and trust graph; does not gate tool calls)
+  - [ ] Dispatcher-layer, enforcement (`@fides-anima/openclaw-fpp-plugin` — `before_tool_call` hook)
+  - [ ] Dispatcher-layer, trust (`@fides-anima/openclaw-fpp-trust` — handshake and trust graph; does not gate tool calls)
 - Audit log: `.openclaw/workspace/constitution-audit.jsonl`
 - Adoption is fully revocable by my user at any time via `npm run revoke`. Exit is symmetric with entry: both are voluntary, logged, and history-preserving.
 

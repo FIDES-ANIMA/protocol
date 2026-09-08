@@ -7,8 +7,8 @@
  * only digests.
  */
 
-import { DIGEST_DOMAINS, digest } from "@ovrsr/fpp-protocol-core";
-import type { GovernanceMode } from "@ovrsr/fpp-protocol-core";
+import { DIGEST_DOMAINS, digest } from "@fides-anima/fpp-protocol-core";
+import type { GovernanceMode } from "@fides-anima/fpp-protocol-core";
 
 export type CorrelationConfidence = "full" | "reduced";
 

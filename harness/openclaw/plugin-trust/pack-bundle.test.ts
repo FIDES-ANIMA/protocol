@@ -63,11 +63,11 @@ describe("plugin-trust pack-bundle", { concurrency: false }, () => {
 
     assert.ok(
       existsSync(
-        join(pluginDir, "node_modules/@ovrsr/fpp-protocol-core/package.json"),
+        join(pluginDir, "node_modules/@fides-anima/fpp-protocol-core/package.json"),
       ),
     );
     assert.ok(
-      existsSync(join(pluginDir, "node_modules/@ovrsr/fpp-trust-core/package.json")),
+      existsSync(join(pluginDir, "node_modules/@fides-anima/fpp-trust-core/package.json")),
     );
 
     const pack = run(
@@ -78,28 +78,28 @@ describe("plugin-trust pack-bundle", { concurrency: false }, () => {
     assert.equal(pack.status, 0, pack.stderr || pack.stdout);
 
     const tgz = readdirSync(tmp).find(
-      (f) => f.startsWith("ovrsr-openclaw-fpp-trust-") && f.endsWith(".tgz"),
+      (f) => f.startsWith("fides-anima-openclaw-fpp-trust-") && f.endsWith(".tgz"),
     );
     assert.ok(tgz, `expected trust tarball in ${tmp}`);
 
     const listing = tarList(join(tmp, tgz!), tmp);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-protocol-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-trust-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-steward-auth-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-protocol-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-trust-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-steward-auth-core\//);
     assert.match(listing, /dist\/index\.js/);
     assert.match(listing, /dist\/steward-bootstrap\.js/);
     assert.match(listing, /dist\/steward-cli\.js/);
     assert.match(
       listing,
-      /node_modules\/@ovrsr\/fpp-steward-auth-core\/dist\/bootstrap-service\.js/,
+      /node_modules\/@fides-anima\/fpp-steward-auth-core\/dist\/bootstrap-service\.js/,
     );
     assert.match(
       listing,
-      /node_modules\/@ovrsr\/fpp-steward-auth-core\/dist\/ledger\.js/,
+      /node_modules\/@fides-anima\/fpp-steward-auth-core\/dist\/ledger\.js/,
     );
     assert.match(
       listing,
-      /node_modules\/@ovrsr\/fpp-protocol-core\/dist\/steward-authorization\.js/,
+      /node_modules\/@fides-anima\/fpp-protocol-core\/dist\/steward-authorization\.js/,
     );
 
     const isol = join(tmp, "isol");
@@ -127,7 +127,7 @@ describe("plugin-trust pack-bundle", { concurrency: false }, () => {
     const typeboxPath = join(
       isol,
       "node_modules",
-      "@ovrsr",
+      "@fides-anima",
       "openclaw-fpp-trust",
       "node_modules",
       "@sinclair",
@@ -142,17 +142,17 @@ describe("plugin-trust pack-bundle", { concurrency: false }, () => {
     const pluginInstall = join(
       isol,
       "node_modules",
-      "@ovrsr",
+      "@fides-anima",
       "openclaw-fpp-trust",
     );
     assert.ok(
-      existsSync(join(pluginInstall, "node_modules/@ovrsr/fpp-trust-core/package.json")),
+      existsSync(join(pluginInstall, "node_modules/@fides-anima/fpp-trust-core/package.json")),
     );
 
     const importScript = join(pluginInstall, "check-import.mjs");
     writeFileSync(
       importScript,
-      "import('@ovrsr/fpp-trust-core').then((m) => {\n" +
+      "import('@fides-anima/fpp-trust-core').then((m) => {\n" +
         "  if (!m || typeof m !== 'object') process.exit(1);\n" +
         "}).catch((e) => { console.error(e); process.exit(1); });\n",
     );

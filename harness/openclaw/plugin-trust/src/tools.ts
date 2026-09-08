@@ -16,37 +16,37 @@ import {
   type FreshnessEnvelope,
   type QuorumBallotV1,
   type SignedEmergencyOverrideV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   EmergencyOverrideStore,
   type AdmitResult,
-} from "@ovrsr/fpp-enforcement-core";
-import type { AgentIdentity } from "@ovrsr/fpp-trust-core";
-import { signClaim } from "@ovrsr/fpp-trust-core";
-import type { ConstitutionalClaim, HandshakeResult } from "@ovrsr/fpp-trust-core";
-import { ConstitutionalHandshake } from "@ovrsr/fpp-trust-core";
-import { TrustGraphProtocol, TrustLevel } from "@ovrsr/fpp-trust-core";
-import { ScopedTrustStore } from "@ovrsr/fpp-trust-core";
-import type { MerkleBridge, MerkleProof } from "@ovrsr/fpp-trust-core";
-import type { StrictModeManager } from "@ovrsr/fpp-trust-core";
-import type { GroupContextManager } from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-enforcement-core";
+import type { AgentIdentity } from "@fides-anima/fpp-trust-core";
+import { signClaim } from "@fides-anima/fpp-trust-core";
+import type { ConstitutionalClaim, HandshakeResult } from "@fides-anima/fpp-trust-core";
+import { ConstitutionalHandshake } from "@fides-anima/fpp-trust-core";
+import { TrustGraphProtocol, TrustLevel } from "@fides-anima/fpp-trust-core";
+import { ScopedTrustStore } from "@fides-anima/fpp-trust-core";
+import type { MerkleBridge, MerkleProof } from "@fides-anima/fpp-trust-core";
+import type { StrictModeManager } from "@fides-anima/fpp-trust-core";
+import type { GroupContextManager } from "@fides-anima/fpp-trust-core";
 import {
   verifyReceiptEvidence,
   getReceiptRoot,
   createTypedReceiptInclusionEvidence,
   RECEIPT_LOG_KIND,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 import {
   buildTrustStateCapsule,
   validateTrustStateCapsule,
   isLegacyClaimMasquerading,
-} from "@ovrsr/fpp-trust-core";
-import type { QuorumSessionManager } from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
+import type { QuorumSessionManager } from "@fides-anima/fpp-trust-core";
 import {
   computeIntendedMandateDigest,
   signQuorumBallot,
   signQuorumProposal,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 import { resolveAdoptedAt } from "./resolve-adopted-at.js";
 
 export interface ToolDependencies {

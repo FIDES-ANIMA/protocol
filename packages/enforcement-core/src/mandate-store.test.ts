@@ -10,7 +10,7 @@ import {
   signMessage,
   verifyMandateSignature,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { MandateStore } from "./mandate-store.js";
 import { createTempWorkspace } from "./test-helpers.js";
 

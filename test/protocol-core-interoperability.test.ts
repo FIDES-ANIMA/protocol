@@ -1,5 +1,5 @@
 /**
- * Cross-package interoperability vectors for @ovrsr/fpp-protocol-core
+ * Cross-package interoperability vectors for @fides-anima/fpp-protocol-core
  * and the harness-agnostic enforcement/trust cores.
  *
  * Produces digests/proofs/claims via core APIs and verifies them the same way
@@ -22,23 +22,23 @@ import {
   parseClaim,
   verifyMerkleProof,
   DIGEST_DOMAINS,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   PACKAGE_NAME as ENFORCEMENT_PACKAGE_NAME,
   classifyToolCall,
   resolveDisposition,
   DEFAULT_CONFIG,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import {
   PACKAGE_NAME as TRUST_PACKAGE_NAME,
   createTrustStack,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";
 import {
   mintStewardIdV1,
   parseStewardIdV1,
   isStewardIdV1,
-} from "@ovrsr/fpp-protocol-core";
-import { PACKAGE_NAME as STEWARD_PACKAGE_NAME } from "@ovrsr/fpp-steward-auth-core";
+} from "@fides-anima/fpp-protocol-core";
+import { PACKAGE_NAME as STEWARD_PACKAGE_NAME } from "@fides-anima/fpp-steward-auth-core";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -99,9 +99,9 @@ describe("protocol-core interoperability", () => {
 
 describe("enforcement-core + trust-core interoperability", () => {
   it("cores declare package names and pin protocol-core without openclaw", () => {
-    assert.equal(ENFORCEMENT_PACKAGE_NAME, "@ovrsr/fpp-enforcement-core");
-    assert.equal(TRUST_PACKAGE_NAME, "@ovrsr/fpp-trust-core");
-    assert.equal(STEWARD_PACKAGE_NAME, "@ovrsr/fpp-steward-auth-core");
+    assert.equal(ENFORCEMENT_PACKAGE_NAME, "@fides-anima/fpp-enforcement-core");
+    assert.equal(TRUST_PACKAGE_NAME, "@fides-anima/fpp-trust-core");
+    assert.equal(STEWARD_PACKAGE_NAME, "@fides-anima/fpp-steward-auth-core");
     for (const rel of [
       "packages/enforcement-core/package.json",
       "packages/trust-core/package.json",
@@ -113,7 +113,7 @@ describe("enforcement-core + trust-core interoperability", () => {
         dependencies?: Record<string, string>;
         peerDependencies?: Record<string, string>;
       };
-      assert.equal(pkg.dependencies?.["@ovrsr/fpp-protocol-core"], "1.0.2");
+      assert.equal(pkg.dependencies?.["@fides-anima/fpp-protocol-core"], "1.0.2");
       assert.equal(pkg.dependencies?.openclaw, undefined);
       assert.equal(pkg.peerDependencies?.openclaw, undefined);
     }
@@ -155,7 +155,7 @@ describe("enforcement-core + trust-core interoperability", () => {
   });
 
   it("steward identity contracts remain consumable independently of OpenClaw", () => {
-    assert.equal(STEWARD_PACKAGE_NAME, "@ovrsr/fpp-steward-auth-core");
+    assert.equal(STEWARD_PACKAGE_NAME, "@fides-anima/fpp-steward-auth-core");
     const id = mintStewardIdV1();
     assert.equal(isStewardIdV1(id), true);
     assert.equal(parseStewardIdV1(id).ok, true);

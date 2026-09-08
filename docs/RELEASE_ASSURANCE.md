@@ -19,24 +19,27 @@ Publish (`harness/openclaw/scripts/clawhub-publish.sh`) should refuse an invalid
 | `npm run verify:all` | Constitution, fixtures, typecheck, tests, pack contents |
 | `npm run assurance:packages` | Deterministic inventories + CycloneDX SBOMs (no publish) |
 | `bash scripts/verify-pack.sh` | Builds cores first, confirms exact core pins, pack contents, and true isolated OpenClaw-flag installs of plugin tarballs alone (no side-loaded core tarballs; cores embedded via `bundledDependencies`) |
+| `npm run publish:npm:dry` | Runs npm's public-package prepack and publish validation for all ten packages without publishing |
 | `npm run release:verify` | Verify a signed release manifest |
 
 ## Release order
 
-1. **Build / test `@ovrsr/fpp-*-core`** — consumers must not pack against a missing `dist/`.
-2. **Confirm exact core pins** in plugin/adapter `package.json` (no `^` / `~`; must match workspace versions).
-3. **Bundle cores into consumers** via `bundledDependencies` + `npm run bundle:deps` / `prepack` (`scripts/bundle-workspace-deps.ts`). Cores are **not** published to npm or ClawHub.
-4. **Pack / publish skill**, then **enforcement plugin**, then **trust plugin** (tarballs must embed `node_modules/@ovrsr/fpp-*`).
-5. **Smoke:** `bash scripts/smoke-plugin-install.sh` (OpenClaw-flag isolated install).
+1. **Build / test `@fides-anima/fpp-*-core`** — consumers must not pack against a missing `dist/`.
+2. **Confirm exact core pins** in consumer `package.json` files (no `^` / `~`; pins must match workspace versions).
+3. **Dry-run all public npm packages** with `npm run publish:npm:dry`.
+4. **Publish npm packages in dependency order:** protocol-core; steward-auth-core; enforcement-core and trust-core; tool-proxy; adapters; OpenClaw plugins.
+5. **Bundle cores into ClawHub consumers** via `bundledDependencies` + `npm run bundle:deps` / `prepack` (`scripts/bundle-workspace-deps.ts`) while registry migration remains in progress.
+6. **Pack / publish the ClawHub skill**, then **enforcement plugin**, then **trust plugin** (tarballs must embed `node_modules/@fides-anima/fpp-*`).
+7. **Smoke:** `bash scripts/smoke-plugin-install.sh` (OpenClaw-flag isolated install).
 
-Order summary: **build cores → bundle into consumers → publish plugins**.
+Detailed npm operator steps are in [`runbooks/npm-publish.md`](runbooks/npm-publish.md).
 
 `harness/openclaw/scripts/clawhub-publish.sh` refuses to publish if the pack listing lacks bundled core paths.
 
 ### Rollback
 
 - Roll back by republishing the previous **plugin** version (which embeds the previous exact core pins).
-- Do not assume installers can fetch `@ovrsr/fpp-*-core` from npmjs.com — they cannot.
+- Until the first public npm release completes, do not assume installers can fetch `@fides-anima/fpp-*-core` from npmjs.com.
 - Workspace development uses npm workspaces (hoisted); published tarballs embed cores via `bundledDependencies`. Public deps (`@noble/*`, `@sinclair/typebox`) still resolve from the registry.
 
 ## Package reproducibility
@@ -54,7 +57,7 @@ Outputs (gitignored locally; retained as CI artifacts):
 
 ## SBOMs
 
-SBOMs list the package itself plus runtime `dependencies` (including the exact `@ovrsr/fpp-protocol-core` pin for plugins). Peer/optional tooling such as `openclaw` is not treated as a shipped runtime dependency of the tarball. DevDependencies are omitted from the distributable SBOM.
+SBOMs list the package itself plus runtime `dependencies` (including the exact `@fides-anima/fpp-protocol-core` pin for plugins). Peer/optional tooling such as `openclaw` is not treated as a shipped runtime dependency of the tarball. DevDependencies are omitted from the distributable SBOM.
 
 ## Raising the bar later
 

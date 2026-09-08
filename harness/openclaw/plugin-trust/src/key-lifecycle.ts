@@ -8,4 +8,4 @@ export {
   type KeyLifecycleEvent,
   type KeyLifecycleKind,
   type KeyValidityInterval,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

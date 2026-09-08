@@ -6,7 +6,7 @@ This runbook describes the tested, non-enforcement integration of the Freedom Pr
 
 This integration intentionally omits the repository's enforcement plugin:
 
-- Do not install or wire `harness/openclaw/plugin/` or `@ovrsr/openclaw-fpp-plugin`.
+- Do not install or wire `harness/openclaw/plugin/` or `@fides-anima/openclaw-fpp-plugin`.
 - Do not claim dispatcher-layer or non-bypassable tool enforcement.
 - Do not install OpenClaw-specific plugins in Hermes.
 - Do not expose FPP trust operations over Hermes A2A until a narrowly scoped adapter and Agent Card change are separately reviewed and authorized.
@@ -73,10 +73,10 @@ The repository's harness-agnostic cores can be tested without installing the enf
 
 ```bash
 cd ~/fpp-test/repo
-npm run build -w @ovrsr/fpp-protocol-core
-npm run typecheck -w @ovrsr/fpp-trust-core
-npm run test -w @ovrsr/fpp-protocol-core
-npm run test -w @ovrsr/fpp-trust-core
+npm run build -w @fides-anima/fpp-protocol-core
+npm run typecheck -w @fides-anima/fpp-trust-core
+npm run test -w @fides-anima/fpp-protocol-core
+npm run test -w @fides-anima/fpp-trust-core
 ```
 
 The protocol-core and trust-core checks passed in the test clone. The trust-core typecheck requires protocol-core to be built first because the workspace package publishes its `dist/` declarations locally.
@@ -113,7 +113,7 @@ Do not merge the repository's OpenClaw-specific enforcement or trust plugin mani
 
 ## 6. Handshake integration boundary
 
-The repository's `@ovrsr/fpp-trust-core` contains a constitutional handshake implementation and tests, including signed claims, freshness, audience binding, replay protection, and trust-level limitations. Hermes currently has no local bridge that invokes this API and no A2A method that exposes it.
+The repository's `@fides-anima/fpp-trust-core` contains a constitutional handshake implementation and tests, including signed claims, freshness, audience binding, replay protection, and trust-level limitations. Hermes currently has no local bridge that invokes this API and no A2A method that exposes it.
 
 Therefore:
 

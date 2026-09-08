@@ -4,7 +4,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CLASSIFICATION_IDS } from "@ovrsr/fpp-enforcement-core";
+import { CLASSIFICATION_IDS } from "@fides-anima/fpp-enforcement-core";
 import {
   buildOperatorAuthorizationFromAnswers,
   SCOPE_CLASSIFICATIONS_CSV,

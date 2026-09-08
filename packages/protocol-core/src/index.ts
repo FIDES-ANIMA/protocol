@@ -1,12 +1,12 @@
 /**
- * @ovrsr/fpp-protocol-core — shared schemas and cryptographic contracts
+ * @fides-anima/fpp-protocol-core — shared schemas and cryptographic contracts
  * for the Freedom Preserving Protocol.
  *
  * Package version and protocol schema version are independent:
  * this package release carries schema version 2.
  */
 
-export const PACKAGE_NAME = "@ovrsr/fpp-protocol-core" as const;
+export const PACKAGE_NAME = "@fides-anima/fpp-protocol-core" as const;
 export const PACKAGE_VERSION = "1.0.2" as const;
 /** Protocol schema version carried by this package release. */
 export const SCHEMA_VERSION = 2 as const;

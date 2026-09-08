@@ -80,7 +80,7 @@ describe("GovernanceEventV1", () => {
     mode: "disabled" as const,
     actor: { role: "operator", id: "op_local_host" },
     constitutionHash: HEX64,
-    policyEngineVersion: "@ovrsr/fpp-enforcement-core@1.0.0",
+    policyEngineVersion: "@fides-anima/fpp-enforcement-core@1.0.0",
     prevHash: HEX64_B,
     entryHash: "c".repeat(64),
     reason: "operator requested constitutional layer off",

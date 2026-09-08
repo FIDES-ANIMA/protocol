@@ -6,17 +6,17 @@ Freedom Preserving Protocol ships installable artifacts at three layers. Each ha
 
 | Layer | Artifact | What it can do | What it cannot do |
 |-------|----------|----------------|-------------------|
-| Protocol contracts | `@ovrsr/fpp-protocol-core` | Shared schemas, canonicalization, Merkle, identity, claim/freshness/receipt contracts, workspace profiles (`FPP_WORKSPACE`). | Enforce policy at runtime; emit receipts by itself. |
-| Library cores | `@ovrsr/fpp-enforcement-core`, `@ovrsr/fpp-trust-core` | Importable classifier, disposition engine, mandate store, trust stack (`createTrustStack`) with **no** OpenClaw peer dependency. | Register harness hooks by themselves — that requires an adapter (`harness/openclaw/plugin/`, `harness/cursor/adapter`, `harness/claude-code/adapter`, `harness/codex/adapter`). |
+| Protocol contracts | `@fides-anima/fpp-protocol-core` | Shared schemas, canonicalization, Merkle, identity, claim/freshness/receipt contracts, workspace profiles (`FPP_WORKSPACE`). | Enforce policy at runtime; emit receipts by itself. |
+| Library cores | `@fides-anima/fpp-enforcement-core`, `@fides-anima/fpp-trust-core` | Importable classifier, disposition engine, mandate store, trust stack (`createTrustStack`) with **no** OpenClaw peer dependency. | Register harness hooks by themselves — that requires an adapter (`harness/openclaw/plugin/`, `harness/cursor/adapter`, `harness/claude-code/adapter`, `harness/codex/adapter`). |
 | Prompt-layer | This skill (`freedom-preserving-protocol`) | Add normative text to the agent's context; shape reasoning; describe a five-question check the model runs in-context. | Mechanically veto a tool call. Survive prompt injection. Survive a hostile skill loaded after this one. |
-| Dispatcher-layer | OpenClaw plugins + cross-harness adapters | OpenClaw: `before_tool_call` / `after_tool_call`. Cursor / Claude Code / Codex: native PreToolUse-style hooks (graded). Shared MCP sidecar: `@ovrsr/fpp-tool-proxy`. | Survive a malicious operator with shell access. Survive a compromised runtime. Survive an operator who disables hooks/plugins. Prove completeness of all actions or behavioral compliance. Gateway-non-bypassable binding is Plan 12. |
+| Dispatcher-layer | OpenClaw plugins + cross-harness adapters | OpenClaw: `before_tool_call` / `after_tool_call`. Cursor / Claude Code / Codex: native PreToolUse-style hooks (graded). Shared MCP sidecar: `@fides-anima/fpp-tool-proxy`. | Survive a malicious operator with shell access. Survive a compromised runtime. Survive an operator who disables hooks/plugins. Prove completeness of all actions or behavioral compliance. Gateway-non-bypassable binding is Plan 12. |
 
 ## Runtime support matrix
 
 | Surface | OpenClaw | Cursor | Claude Code | Codex | Library (Node, no harness) |
 |---------|----------|--------|-------------|-------|----------------------------|
 | Prompt-layer skill | yes | yes (AgentSkills) | yes | partial (`trigger:` gaps) | n/a |
-| Enforcement / trust **cores** | via OpenClaw adapters | via `@ovrsr/fpp-adapter-cursor` | via `@ovrsr/fpp-adapter-claude-code` | via `@ovrsr/fpp-adapter-codex` | yes |
+| Enforcement / trust **cores** | via OpenClaw adapters | via `@fides-anima/fpp-adapter-cursor` | via `@fides-anima/fpp-adapter-claude-code` | via `@fides-anima/fpp-adapter-codex` | yes |
 | Dispatcher hooks | yes (`before_tool_call`) | yes (`preToolUse` / `beforeMCPExecution`) | yes (`PreToolUse`) | graded (`PreToolUse`; shell reliable) | n/a |
 | `verify-install` probes | `--profile openclaw` | `--profile cursor` | `--profile claude-code` | `--profile codex` | constitution + audit; probes graded |
 | Graded guarantee | Full OpenClaw plugin path | Hooks deny when installed/trusted; operator can disable | Same; `--dangerously-skip-permissions` bypass | Shell reliable; apply_patch/MCP gaps possible | Caller wires `createEnforcementRuntime` |
@@ -36,7 +36,7 @@ The skill is plain markdown with YAML frontmatter conforming to the AgentSkills 
 | Cursor | yes | Place under `.cursor/skills/` or `~/.cursor/skills/`. Adapter: `harness/cursor/adapter/`. |
 | Codex | partial | Trigger phrases work; some runtimes don't yet consume `trigger:` in sub-skill frontmatter. Adapter: `harness/codex/adapter/` (graded hook coverage). |
 | Other AgentSkills-compliant | unknown | Should work; report back. |
-| Node library consumer | yes | Import `@ovrsr/fpp-enforcement-core` / `@ovrsr/fpp-trust-core` without `openclaw` installed. |
+| Node library consumer | yes | Import `@fides-anima/fpp-enforcement-core` / `@fides-anima/fpp-trust-core` without `openclaw` installed. |
 
 #### Graded dispatcher on non-OpenClaw runtimes
 
@@ -45,7 +45,7 @@ On Claude Code, Cursor, and Codex, install the matching adapter under `harness/<
 - **Works:** native PreToolUse-style hooks drive enforcement-core dispositions (including unattended abstain/mandate paths); receipts under `~/.fpp/<profile>` (or `FPP_WORKSPACE`); `npm run verify-install -- --profile <harness>` reports **local acceptance** and **peer-advertisable** columns separately with `enforcementGrade`.
 - **Graded adoption ceilings:** `native-hook` may be peer-advertisable when probe passes; `tool-proxy` only with partial/`runtime_degraded` disclosure; `prompt-only` allows local `accepted` but peer ads stay `declaration-only`; `none` must not claim peer-visible accepted compliance.
 - **Does not claim:** OpenClaw plugin parity, gateway-non-bypassable binding, or complete tool coverage on Codex (shell is the reliable path).
-- **Shared fallback:** `@ovrsr/fpp-tool-proxy` for MCP/sidecar gateways when hooks are unavailable or incomplete.
+- **Shared fallback:** `@fides-anima/fpp-tool-proxy` for MCP/sidecar gateways when hooks are unavailable or incomplete.
 - **Consequence:** without hooks/adapter installed, FPP at the tool boundary is prompt-layer only. Unknown `--profile` values warn and do **not** false-PASS dispatcher.
 
 ### Dispatcher-layer (OpenClaw plugin — first-class)
@@ -215,11 +215,11 @@ Default `knownCustomTools` is empty (operator extras only). OpenClaw live names 
 
 ## Claim-format migration terminology
 
-`@ovrsr/fpp-protocol-core` (and the other `@ovrsr/fpp-*-core` packages) are **not** on the public npm registry. Published ClawHub plugins pin exact core versions and embed those packages via npm `bundledDependencies` (staged by `scripts/bundle-workspace-deps.ts` at `prepack`). Isolated installs must succeed with OpenClaw-style flags alone — no side-loaded core tarballs (`bash scripts/verify-pack.sh`, `bash scripts/smoke-plugin-install.sh`).
+`@fides-anima/fpp-protocol-core` and the other public packages are staged for npm but have not been published by this repository yet. ClawHub plugins continue to pin exact core versions and embed those packages via npm `bundledDependencies` (staged by `scripts/bundle-workspace-deps.ts` at `prepack`) through the first registry release. Isolated installs must succeed with OpenClaw-style flags alone — no side-loaded core tarballs (`bash scripts/verify-pack.sh`, `bash scripts/smoke-plugin-install.sh`).
 
-Harness adapters under `harness/<harness>/adapter/` stay `private: true`. Install from a workspace clone, or `npm pack` after `bundle:deps` / `prepack` and install the resulting tarball.
+Harness adapters under `harness/<harness>/adapter/` are staged as public `@fides-anima/fpp-adapter-*` packages. Until their first npm release, install from a workspace clone or from a tarball produced after `bundle:deps` / `prepack`.
 
-Release order: build cores → **bundle into consumers** → skill → enforcement plugin → trust plugin. Rollback: republish the previous plugin version (embeds previous core pins). See `docs/RELEASE_ASSURANCE.md`.
+Release order: publish npm packages in dependency order, while continuing to **bundle cores into ClawHub consumers** → skill → enforcement plugin → trust plugin. Rollback: republish the previous plugin version (embeds previous core pins). See `docs/RELEASE_ASSURANCE.md`.
 
 - **Legacy-v1 claim** — handshake claim format without `schemaVersion`: timestamped, optionally Ed25519-signed, no freshness nonce. Parsed as **declaration-only**; never silently escalated to v2 assurance. Under default `verificationPolicy: "hardened-v2"`, unsigned/legacy claims cannot establish trust.
 - **v2 claim** — carries explicit `schemaVersion: 2`, key-bound agent ID (`fpp:ed25519:<fingerprint>`), claim class, and freshness envelope. Runtime-validated by `parseClaim`.

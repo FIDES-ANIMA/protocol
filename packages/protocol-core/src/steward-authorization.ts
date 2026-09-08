@@ -2,7 +2,7 @@
  * Steward / operator authorization wire contracts.
  *
  * Key-independent human steward identity and OpenPGP-signed authorization
- * payloads. Verification backends live in `@ovrsr/fpp-steward-auth-core`;
+ * payloads. Verification backends live in `@fides-anima/fpp-steward-auth-core`;
  * this module defines schemas, mint/parse helpers, and domain digests only.
  */
 

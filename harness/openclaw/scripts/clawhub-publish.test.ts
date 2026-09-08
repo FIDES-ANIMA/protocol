@@ -135,6 +135,8 @@ describe("clawhub-publish fail-hard", () => {
       const out = `${result.stdout}\n${result.stderr}`;
       assert.equal(result.status, 0, `${target}: ${out}`);
       assert.match(out, /\[dry-run\]/);
+      assert.match(out, /--name @ovrsr\/openclaw-fpp-(?:plugin|trust)/);
+      assert.doesNotMatch(out, /--name @fides-anima\/openclaw-fpp-/);
       assert.doesNotMatch(out, /clawhub CLI not found/i);
     }
   });

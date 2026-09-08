@@ -17,7 +17,7 @@ describe("release manifest", () => {
     buildReleaseManifest({
       sourceCommit: "abc123",
       constitutionHash: "a".repeat(64),
-      packageName: "@ovrsr/openclaw-fpp-plugin",
+      packageName: "@fides-anima/openclaw-fpp-plugin",
       packageVersion: "1.1.4",
       packageHash: "p".repeat(64),
       lockfileHash: "l".repeat(64),

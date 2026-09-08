@@ -4,8 +4,8 @@ OpenClaw dispatcher plugins and ClawHub skill packaging.
 
 | Path | Package / artifact |
 |------|-------------------|
-| [`plugin/`](plugin/) | `@ovrsr/openclaw-fpp-plugin` — `before_tool_call` enforcement |
-| [`plugin-trust/`](plugin-trust/) | `@ovrsr/openclaw-fpp-trust` — trust graph and handshake |
+| [`plugin/`](plugin/) | `@fides-anima/openclaw-fpp-plugin` — `before_tool_call` enforcement |
+| [`plugin-trust/`](plugin-trust/) | `@fides-anima/openclaw-fpp-trust` — trust graph and handshake |
 | [`skill/`](skill/) | ClawHub skill metadata and allowlist |
 | [`scripts/`](scripts/) | Stage + publish helpers |
 | Prompt source | [`../shared/prompt/`](../shared/prompt/) |

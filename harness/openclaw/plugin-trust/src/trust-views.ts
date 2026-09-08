@@ -7,4 +7,4 @@ export {
   type EvidenceViewSummary,
   type ViewDivergence,
   type ViewEvidenceRecord,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

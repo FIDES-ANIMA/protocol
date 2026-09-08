@@ -1,4 +1,4 @@
-# @ovrsr/openclaw-fpp-trust
+# @fides-anima/openclaw-fpp-trust
 
 OpenClaw plugin for agent-to-agent trust verification under the [Freedom Preserving Protocol](https://github.com/ovrsr/freedom-preserving-protocol).
 
@@ -91,13 +91,15 @@ This is a software-only attention and race-hardening ceremony. The typed fingerp
 
 ## Strict-Mode Contract
 
-When `strictModeOnHandshakeFailure` is enabled and a handshake fails or returns `TrustLevel.UNKNOWN`, the plugin writes a strict-mode entry to `strictModeStatePath` (default `<homedir>/.openclaw/workspace/fpp-strict-sessions.json`; relative forms are absolutized). The enforcement plugin (`@ovrsr/openclaw-fpp-plugin`) reads this file and escalates classifications listed in `strictModeAddApprovalOn` to `requireApproval` for that session.
+When `strictModeOnHandshakeFailure` is enabled and a handshake fails or returns `TrustLevel.UNKNOWN`, the plugin writes a strict-mode entry to `strictModeStatePath` (default `<homedir>/.openclaw/workspace/fpp-strict-sessions.json`; relative forms are absolutized). The enforcement plugin (`@fides-anima/openclaw-fpp-plugin`) reads this file and escalates classifications listed in `strictModeAddApprovalOn` to `requireApproval` for that session.
 
 Under default unattended disposition, trust tools named `fpp_*` (including `fpp_trust_status`) classify as `fpp.governance` and **allow with audit** — they no longer self-abstain as `unknown.unclassified`. This is configuration/event evidence, not behavioral compliance.
 
 The coupling is intentionally loose: the trust plugin only writes; the enforcement plugin only reads. Either can be installed alone.
 
 ## Install
+
+ClawHub remains the supported OpenClaw install channel. The package manifest is also staged for public npm as `@fides-anima/openclaw-fpp-trust`, but this repository has not performed that first npm publish.
 
 ```bash
 openclaw plugins install clawhub:ovrsr/openclaw-fpp-trust
@@ -131,7 +133,7 @@ All options are in `openclaw.plugin.json`. Key settings:
 
 ## What this does NOT do
 
-This plugin does **not** gate tool calls. That is the job of the separate enforcement plugin (`@ovrsr/openclaw-fpp-plugin`). You can install one without the other.
+This plugin does **not** gate tool calls. That is the job of the separate enforcement plugin (`@fides-anima/openclaw-fpp-plugin`). You can install one without the other.
 
 It also does **not** prove behavioral compliance. A successful handshake means: the peer produced a signed claim, the claimed constitution hash matched, freshness/replay checks passed (under hardened policy), and (optionally) a Merkle inclusion proof checked out. That is identity/configuration attestation — the peer's actual conduct is out of scope.
 

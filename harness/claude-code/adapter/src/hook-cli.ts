@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env node
 /**
  * Claude Code PreToolUse hook CLI — stdin JSON → hookSpecificOutput JSON.
  */
@@ -11,8 +11,8 @@ import {
 import {
   workspaceFile,
   resolveWorkspaceRoot,
-} from "@ovrsr/fpp-protocol-core";
-import { assertConfigPathAllowed } from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-protocol-core";
+import { assertConfigPathAllowed } from "@fides-anima/fpp-enforcement-core";
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];

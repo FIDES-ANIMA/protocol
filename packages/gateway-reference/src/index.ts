@@ -9,11 +9,11 @@
 import type {
   EnforcementRuntime,
   FppToolCallContext,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";
 import type {
   GovernanceMode,
   GovernanceStateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { GovernanceLedger } from "./governance-ledger.js";
 
 export type GatewayInvoke = (

@@ -1,10 +1,9 @@
 {
-  "name": "@ovrsr/fpp-adapter-cursor",
+  "name": "@fides-anima/fpp-adapter-cursor",
   "version": "0.1.0",
   "description": "Cursor FppRuntimeAdapter for the Freedom Preserving Protocol",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,13 +16,17 @@
     "dist/",
     "src/",
     "hooks/",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "constitution.json",
+    "constitution.yaml",
+    "SKILL.md"
   ],
   "bundledDependencies": [
-    "@ovrsr/fpp-protocol-core",
-    "@ovrsr/fpp-enforcement-core",
-    "@ovrsr/fpp-steward-auth-core",
-    "@ovrsr/fpp-tool-proxy"
+    "@fides-anima/fpp-protocol-core",
+    "@fides-anima/fpp-enforcement-core",
+    "@fides-anima/fpp-steward-auth-core",
+    "@fides-anima/fpp-tool-proxy"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -35,10 +38,10 @@
   "dependencies": {
     "@noble/ed25519": "^2.1.0",
     "@noble/hashes": "^1.4.0",
-    "@ovrsr/fpp-enforcement-core": "1.0.3",
-    "@ovrsr/fpp-protocol-core": "1.0.2",
-    "@ovrsr/fpp-steward-auth-core": "0.1.0",
-    "@ovrsr/fpp-tool-proxy": "0.1.0",
+    "@fides-anima/fpp-enforcement-core": "1.0.3",
+    "@fides-anima/fpp-protocol-core": "1.0.2",
+    "@fides-anima/fpp-steward-auth-core": "0.1.0",
+    "@fides-anima/fpp-tool-proxy": "0.1.0",
     "@sinclair/typebox": "^0.34.0",
     "openpgp": "^6.2.0"
   },
@@ -49,5 +52,21 @@
   },
   "engines": {
     "node": ">=22.19"
+  },
+  "author": "ovrsr",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ovrsr/freedom-preserving-protocol.git",
+    "directory": "harness/cursor/adapter"
+  },
+  "homepage": "https://github.com/ovrsr/freedom-preserving-protocol#readme",
+  "bugs": {
+    "url": "https://github.com/ovrsr/freedom-preserving-protocol/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "fpp-cursor-hook": "./dist/hook-cli.js"
   }
 }

@@ -28,7 +28,7 @@ import {
   type QuorumEvidencePackageV1,
   type QuorumProposalV1,
   type StandingMandateV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";
 import {

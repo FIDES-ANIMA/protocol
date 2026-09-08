@@ -5,4 +5,4 @@ export {
   type CoverageMetrics,
   type CoverageInput,
   type CompletenessLabel,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

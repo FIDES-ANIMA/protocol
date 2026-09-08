@@ -7,14 +7,14 @@ hooks. See `harness/shared/harness-capabilities.json` and `docs/COMPATIBILITY.md
 ## Prerequisites
 
 - Node `>=22.19` (repo `package.json` `engines.node`)
-- Clone of this repository **or** a packed adapter tarball after `bundle:deps` / `prepack` (adapters are `private: true` and embed unpublished `@ovrsr/*` via `bundledDependencies`; they are not on npm)
+- Clone of this repository **or** a packed adapter tarball after `bundle:deps` / `prepack`; `@fides-anima/fpp-adapter-cursor` is staged for public npm but has not completed its first publish
 - Cursor with Agent hooks enabled
 
 ## Install from pack (optional, outside workspace)
 
 ```bash
 cd harness/cursor/adapter && npm run bundle:deps && npm pack
-# then npm install ./ovrsr-fpp-adapter-cursor-*.tgz in the consumer project
+# then npm install ./fides-anima-fpp-adapter-cursor-*.tgz in the consumer project
 ```
 
 ## Install prompt layer
@@ -24,18 +24,20 @@ Place the skill under `.cursor/skills/freedom-preserving-protocol/` or
 
 ## Enable adapter hooks
 
-From the repo root, copy the sample hooks config and adjust the command path to
-your checkout:
+Copy the sample hooks config from either the repository or the installed
+package:
 
 ```bash
 # Project-scoped
 cp harness/cursor/adapter/hooks/hooks.json .cursor/hooks.json
+# Installed-package equivalent:
+# cp node_modules/@fides-anima/fpp-adapter-cursor/hooks/hooks.json .cursor/hooks.json
 ```
 
 Or merge into `~/.cursor/hooks.json`. The sample runs:
 
 ```text
-npx tsx harness/cursor/adapter/src/hook-cli.ts
+npx --no-install fpp-cursor-hook
 ```
 
 Optional: set `FPP_ENFORCEMENT_CONFIG` to a JSON config path. Default workspace
@@ -75,7 +77,7 @@ npm run self-test
 | Operator can disable hooks | By design (Law 2); not Plan 12 gateway binding |
 | Cloud agents | Some MCP hooks may be deferred per Cursor docs |
 | Trust plugin | OpenClaw-only today; cores are importable without it |
-| Sidecar bypass | Direct tool use that skips hooks is ungated — use `@ovrsr/fpp-tool-proxy` for MCP gateways |
+| Sidecar bypass | Direct tool use that skips hooks is ungated — use `@fides-anima/fpp-tool-proxy` for MCP gateways |
 
 ## Related
 

@@ -14,8 +14,8 @@ import {
   type EnforcementRuntime,
   type FppBeforeToolCallResult,
   type FppRuntimeAdapter,
-} from "@ovrsr/fpp-enforcement-core";
-import { resolveWorkspaceRoot } from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-enforcement-core";
+import { resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
 
 export const CURSOR_HARNESS_ID = "cursor" as const;
 export const CURSOR_INTERCEPTION_STRATEGY = "cursor-hooks-preToolUse" as const;

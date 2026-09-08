@@ -3,4 +3,4 @@ export {
   type DispositionResult,
   type LiveMandateCoverage,
   type ResolveDispositionInput,
-} from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-enforcement-core";

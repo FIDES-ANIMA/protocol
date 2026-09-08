@@ -3,12 +3,12 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": "npx tsx harness/cursor/adapter/src/hook-cli.ts"
+        "command": "npx --no-install fpp-cursor-hook"
       }
     ],
     "postToolUse": [
       {
-        "command": "npx tsx harness/cursor/adapter/src/hook-cli.ts --after"
+        "command": "npx --no-install fpp-cursor-hook --after"
       }
     ]
   }

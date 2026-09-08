@@ -20,7 +20,7 @@ Required sources of truth:
 - plugins: `npm pack` output after `build` and `bundle:deps`
 - adapters: `npm pack` output after `build` and `bundle:deps`
 
-Reason: live installs must receive only the publishable surface plus bundled unpublished `@ovrsr/*` packages.
+Reason: live installs must receive only the publishable surface plus the bundled `@fides-anima/*` workspace packages required during registry migration.
 
 ### Preserve local state
 
@@ -50,13 +50,13 @@ Do not introduce a no-backup fast path unless it is explicit, loudly named, and 
 
 ### Keep exact dependency semantics
 
-Plugins and adapters rely on exact pins plus bundled unpublished workspace packages.
+Plugins and adapters rely on exact pins plus bundled workspace packages during registry migration.
 
 Do not weaken this by:
 
 - replacing exact pins with ranges
 - syncing consumer directories without `bundle:deps`
-- assuming remote hosts can fetch unpublished `@ovrsr/fpp-*` packages from npm
+- assuming remote hosts can fetch `@fides-anima/fpp-*` packages before the first public npm release is complete
 
 ## Scope Boundaries
 

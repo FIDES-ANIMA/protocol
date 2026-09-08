@@ -11,7 +11,7 @@
 
 This RFC specifies a **voluntary** constitutional enforcement layer at the
 tool-router / gateway boundary. A conforming gateway invokes the same disposition
-contract as `@ovrsr/fpp-enforcement-core` / `FppRuntimeAdapter` before tool
+contract as `@fides-anima/fpp-enforcement-core` / `FppRuntimeAdapter` before tool
 execution, so plugin disablement alone cannot silently bypass policy — while
 **Law 2 corrigibility** remains intact: operators MUST retain the ability to
 disable governance, and disablement MUST be auditable.
@@ -41,7 +41,7 @@ boundary — not only interactive approval UIs.
 ## Goals
 
 1. **Normative disposition contract** at the tool-router boundary, aligned with
-   `DispositionDecision` and `AuthorizationClass` in `@ovrsr/fpp-protocol-core`.
+   `DispositionDecision` and `AuthorizationClass` in `@fides-anima/fpp-protocol-core`.
 2. **Unattended-first semantics:** `mandate`, `allow_staged`, `abstain`,
    `emergency` / `quorum-mandate` authorization classes are first-class; human
    approval is optional, not required for every gated call.
@@ -107,7 +107,7 @@ execute or skip.
 **MUST NOT:** Treat `require_approval` as the only gated outcome in unattended
 mode.
 
-**SHOULD:** Load `@ovrsr/fpp-enforcement-core` (or a byte-equivalent WASM/JS
+**SHOULD:** Load `@fides-anima/fpp-enforcement-core` (or a byte-equivalent WASM/JS
 port) rather than reimplementing disposition rules ad hoc.
 
 Detailed sequence and OpenClaw term mapping: see **Reference architecture**.

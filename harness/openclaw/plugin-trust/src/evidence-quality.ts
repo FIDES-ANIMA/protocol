@@ -6,4 +6,4 @@ export {
   type EvidenceQualityResult,
   type ObservationType,
   type QualityEvidenceItem,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

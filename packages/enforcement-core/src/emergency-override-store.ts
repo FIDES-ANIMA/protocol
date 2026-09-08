@@ -24,7 +24,7 @@ import {
   type EmergencyOverrideLedgerEntry,
   type EmergencyOverrideStoreFile,
   type SignedEmergencyOverrideV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 
 export type { EmergencyOverrideLedgerEntry, EmergencyOverrideStoreFile };
 

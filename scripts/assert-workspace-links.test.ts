@@ -3,7 +3,7 @@
  *
  * Nested `npm ci` inside harness/openclaw/plugin/ or
  * harness/openclaw/plugin-trust/ rewrites the monorepo install and can drop
- * packages such as @ovrsr/fpp-tool-proxy that adapters resolve via the root
+ * packages such as @fides-anima/fpp-tool-proxy that adapters resolve via the root
  * workspace tree.
  */
 import { describe, it } from "node:test";
@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const TOOL_PROXY = "@ovrsr/fpp-tool-proxy";
+const TOOL_PROXY = "@fides-anima/fpp-tool-proxy";
 
 function workspaceLinkPath(pkgName: string): string {
   return join(root, "node_modules", ...pkgName.split("/"));
@@ -32,7 +32,7 @@ function findInstalledPackage(fromDir: string, pkgName: string): string | null {
 }
 
 describe("workspace package links", () => {
-  it("keeps @ovrsr/fpp-tool-proxy linked from the root install", () => {
+  it("keeps @fides-anima/fpp-tool-proxy linked from the root install", () => {
     const linkPath = workspaceLinkPath(TOOL_PROXY);
     assert.equal(
       existsSync(linkPath),
@@ -51,7 +51,7 @@ describe("workspace package links", () => {
     assert.equal(pkg.name, TOOL_PROXY);
   });
 
-  it("resolves @ovrsr/fpp-tool-proxy from every adapter workspace", () => {
+  it("resolves @fides-anima/fpp-tool-proxy from every adapter workspace", () => {
     for (const adapter of ["cursor", "claude-code", "codex"] as const) {
       const adapterRoot = join(root, "harness", adapter, "adapter");
       const resolved = findInstalledPackage(adapterRoot, TOOL_PROXY);
@@ -61,7 +61,7 @@ describe("workspace package links", () => {
       );
       assert.match(
         resolved.replace(/\\/g, "/"),
-        /(?:^|\/)(?:packages\/tool-proxy|node_modules\/@ovrsr\/fpp-tool-proxy)$/,
+        /(?:^|\/)(?:packages\/tool-proxy|node_modules\/@fides-anima\/fpp-tool-proxy)$/,
         `unexpected resolution from harness/${adapter}/adapter: ${resolved}`,
       );
     }

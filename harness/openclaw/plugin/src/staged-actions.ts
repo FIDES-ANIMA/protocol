@@ -1,1 +1,1 @@
-export { StagedActionLedger } from "@ovrsr/fpp-enforcement-core";
+export { StagedActionLedger } from "@fides-anima/fpp-enforcement-core";

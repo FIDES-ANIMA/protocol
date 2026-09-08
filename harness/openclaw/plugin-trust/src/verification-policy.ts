@@ -3,4 +3,4 @@ export {
   resolveVerificationPolicy,
   type ResolvedVerificationPolicy,
   type VerificationPolicy,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

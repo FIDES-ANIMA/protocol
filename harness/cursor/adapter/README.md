@@ -1,12 +1,20 @@
-# @ovrsr/fpp-adapter-cursor
+# @fides-anima/fpp-adapter-cursor
 
 Cursor `FppRuntimeAdapter` for the Freedom Preserving Protocol.
+
+## Package availability
+
+This adapter is staged for public npm but has not been published from this repository yet. Until the first release, use the workspace or a local packed tarball.
+
+```bash
+npm install @fides-anima/fpp-adapter-cursor@0.1.0
+```
 
 ## Interception strategy
 
 **Native Cursor hooks** (`preToolUse` / `beforeMCPExecution`), not an invented
-extension API. Install the sample hook config and point the command at the
-adapter CLI (or `npx tsx` against `handleCursorPreToolUse`).
+extension API. The sample hook config runs the packaged
+`fpp-cursor-hook` CLI.
 
 | Capability | Status |
 |------------|--------|
@@ -26,4 +34,9 @@ Optional `FPP_ENFORCEMENT_CONFIG` must point to a JSON file **inside** that work
 ## Install (hooks)
 
 Copy [`hooks/hooks.json`](./hooks/hooks.json) into `.cursor/hooks.json` (project)
-or `~/.cursor/hooks.json` (user), adjusting the command path to your checkout.
+or `~/.cursor/hooks.json` (user). It invokes
+`npx --no-install fpp-cursor-hook`.
+
+## License
+
+See [LICENSE](./LICENSE).

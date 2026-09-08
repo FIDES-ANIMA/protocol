@@ -30,7 +30,7 @@ jobs:
       - name: Install root dependencies
         # Root workspaces already include harness/openclaw/plugin and plugin-trust.
         # Nested `npm ci` in those directories rewrites the install tree and drops
-        # workspace packages adapters need (notably @ovrsr/fpp-tool-proxy).
+        # workspace packages adapters need (notably @fides-anima/fpp-tool-proxy).
         run: npm ci
 
       - name: Assert workspace package links
@@ -43,6 +43,9 @@ jobs:
         run: npm run verify:all
         env:
           SKIP_INSTALL: "1"
+
+      - name: Public npm package dry-run
+        run: npm run publish:npm:dry
 
       - name: Conformance receipt + contextual trust e2e
         run: npm run test:e2e

@@ -1,9 +1,9 @@
 /**
- * @ovrsr/fpp-trust-core — harness-agnostic trust graph and handshake stack
+ * @fides-anima/fpp-trust-core — harness-agnostic trust graph and handshake stack
  * for the Freedom Preserving Protocol.
  */
 
-export const PACKAGE_NAME = "@ovrsr/fpp-trust-core" as const;
+export const PACKAGE_NAME = "@fides-anima/fpp-trust-core" as const;
 export const PACKAGE_VERSION = "1.0.2" as const;
 
 export { resolveVerificationPolicy } from "./verification-policy.js";
@@ -285,16 +285,3 @@ export {
   type FppTrustConfig,
   type TrustConfigDiagnostic,
 } from "./create-trust-stack.js";
-
-export {
-  createTempWorkspace,
-  createFakeClock,
-  createHookCapture,
-  createFakeApprovalResolver,
-  type TempWorkspace,
-  type FakeClock,
-  type CapturedHook,
-  type HookCapture,
-  type ApprovalDecision,
-  type FakeApprovalResolver,
-} from "./test-helpers.js";

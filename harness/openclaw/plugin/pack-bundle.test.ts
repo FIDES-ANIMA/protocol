@@ -65,13 +65,13 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
 
     assert.ok(
       existsSync(
-        join(pluginDir, "node_modules/@ovrsr/fpp-protocol-core/package.json"),
+        join(pluginDir, "node_modules/@fides-anima/fpp-protocol-core/package.json"),
       ),
       "expected staged protocol-core in plugin/node_modules",
     );
     assert.ok(
       existsSync(
-        join(pluginDir, "node_modules/@ovrsr/fpp-enforcement-core/package.json"),
+        join(pluginDir, "node_modules/@fides-anima/fpp-enforcement-core/package.json"),
       ),
       "expected staged enforcement-core in plugin/node_modules",
     );
@@ -80,14 +80,14 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
     assert.equal(pack.status, 0, pack.stderr || pack.stdout);
 
     const tgz = readdirSync(tmp).find(
-      (f) => f.startsWith("ovrsr-openclaw-fpp-plugin-") && f.endsWith(".tgz"),
+      (f) => f.startsWith("fides-anima-openclaw-fpp-plugin-") && f.endsWith(".tgz"),
     );
     assert.ok(tgz, `expected plugin tarball in ${tmp}, got: ${readdirSync(tmp).join(", ")}`);
 
     const listing = tarList(join(tmp, tgz!), tmp);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-protocol-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-enforcement-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-steward-auth-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-protocol-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-enforcement-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-steward-auth-core\//);
     assert.match(listing, /dist\/index\.js/);
 
     const isol = join(tmp, "isol");
@@ -114,11 +114,11 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
     const pluginInstall = join(
       isol,
       "node_modules",
-      "@ovrsr",
+      "@fides-anima",
       "openclaw-fpp-plugin",
     );
     assert.ok(
-      existsSync(join(pluginInstall, "node_modules/@ovrsr/fpp-enforcement-core/package.json")),
+      existsSync(join(pluginInstall, "node_modules/@fides-anima/fpp-enforcement-core/package.json")),
       "bundled enforcement-core must land under the installed plugin",
     );
 
@@ -126,12 +126,12 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
       readFileSync(
         join(
           pluginInstall,
-          "node_modules/@ovrsr/fpp-enforcement-core/package.json",
+          "node_modules/@fides-anima/fpp-enforcement-core/package.json",
         ),
         "utf8",
       ),
     ) as { name: string; version: string };
-    assert.equal(nestedCorePkg.name, "@ovrsr/fpp-enforcement-core");
+    assert.equal(nestedCorePkg.name, "@fides-anima/fpp-enforcement-core");
     assert.equal(nestedCorePkg.version, "1.0.3");
 
     const pluginPkg = JSON.parse(
@@ -142,14 +142,14 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
     };
     assert.equal(pluginPkg.version, "1.1.18");
     assert.equal(
-      pluginPkg.dependencies?.["@ovrsr/fpp-enforcement-core"],
+      pluginPkg.dependencies?.["@fides-anima/fpp-enforcement-core"],
       "1.0.3",
     );
 
     const actionDescriptorJs = readFileSync(
       join(
         pluginInstall,
-        "node_modules/@ovrsr/fpp-enforcement-core/dist/action-descriptor.js",
+        "node_modules/@fides-anima/fpp-enforcement-core/dist/action-descriptor.js",
       ),
       "utf8",
     );
@@ -157,11 +157,11 @@ describe("plugin pack-bundle", { concurrency: false }, () => {
     assert.match(actionDescriptorJs, /params\?\.changes|extractStructuredChangeTargets/);
     assert.match(actionDescriptorJs, /outOfWorkspacePaths/);
 
-    // Script must live under the plugin package so Node resolves @ovrsr/* from there
+    // Script must live under the plugin package so Node resolves @fides-anima/* from there
     const importScript = join(pluginInstall, "check-import.mjs");
     writeFileSync(
       importScript,
-      "import('@ovrsr/fpp-enforcement-core').then((m) => {\n" +
+      "import('@fides-anima/fpp-enforcement-core').then((m) => {\n" +
         "  if (!m || typeof m !== 'object') process.exit(1);\n" +
         "}).catch((e) => { console.error(e); process.exit(1); });\n",
     );

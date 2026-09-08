@@ -34,10 +34,10 @@ describe("pack-workspace-consumer", { concurrency: false }, () => {
   it("packedTarballName matches npm pack scoped filenames", () => {
     assert.equal(
       packedTarballName({
-        name: "@ovrsr/openclaw-fpp-trust",
+        name: "@fides-anima/openclaw-fpp-trust",
         version: "1.2.12",
       }),
-      "ovrsr-openclaw-fpp-trust-1.2.12.tgz",
+      "fides-anima-openclaw-fpp-trust-1.2.12.tgz",
     );
     assert.equal(
       packedTarballName({ name: "plain-pkg", version: "0.1.0" }),
@@ -66,10 +66,26 @@ describe("pack-workspace-consumer", { concurrency: false }, () => {
     });
     assert.ok(existsSync(tgz), `expected tarball at ${tgz}`);
     const listing = tarList(tgz);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-protocol-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-trust-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-enforcement-core\//);
-    assert.match(listing, /node_modules\/@ovrsr\/fpp-steward-auth-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-protocol-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-trust-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-enforcement-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-steward-auth-core\//);
     assert.match(listing, /dist\/index\.js/);
+    assert.doesNotMatch(listing, /(?:^|\/)test-helpers\.[^/\r\n]+/m);
+  });
+
+  it("tool-proxy tarball embeds enforcement-core's steward-auth dependency", async () => {
+    const dest = join(tmp, "tool-proxy");
+    const tgz = await packWorkspaceConsumer({
+      repoRoot: root,
+      packageDir: join(root, "packages", "tool-proxy"),
+      destination: dest,
+    });
+    assert.ok(existsSync(tgz), `expected tarball at ${tgz}`);
+    const listing = tarList(tgz);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-protocol-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-enforcement-core\//);
+    assert.match(listing, /node_modules\/@fides-anima\/fpp-steward-auth-core\//);
+    assert.doesNotMatch(listing, /(?:^|\/)test-helpers\.[^/\r\n]+/m);
   });
 });

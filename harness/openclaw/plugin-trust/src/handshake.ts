@@ -6,4 +6,4 @@ export {
   type HandshakeOptions,
   type HandshakeResult,
   type HandshakeSession,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { mergeTrustConfig } from "@ovrsr/fpp-trust-core";
+import { mergeTrustConfig } from "@fides-anima/fpp-trust-core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MANIFEST_PATH = join(__dirname, "..", "openclaw.plugin.json");

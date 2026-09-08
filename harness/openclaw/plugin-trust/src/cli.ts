@@ -20,17 +20,17 @@ import {
   validateFreshness,
   buildReplayKey,
   type FreshnessEnvelope,
-} from "@ovrsr/fpp-protocol-core";
-import type { AgentIdentity } from "@ovrsr/fpp-trust-core";
-import { signClaim, verifyClaim, type SignedClaim } from "@ovrsr/fpp-trust-core";
-import type { ConstitutionalClaim } from "@ovrsr/fpp-trust-core";
-import type { ConstitutionalHandshake } from "@ovrsr/fpp-trust-core";
-import { TrustGraphProtocol, TrustLevel } from "@ovrsr/fpp-trust-core";
-import { ScopedTrustStore } from "@ovrsr/fpp-trust-core";
-import type { MerkleBridge } from "@ovrsr/fpp-trust-core";
-import type { StrictModeManager } from "@ovrsr/fpp-trust-core";
-import type { ReplayCache } from "@ovrsr/fpp-trust-core";
-import type { QuorumSessionManager } from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-protocol-core";
+import type { AgentIdentity } from "@fides-anima/fpp-trust-core";
+import { signClaim, verifyClaim, type SignedClaim } from "@fides-anima/fpp-trust-core";
+import type { ConstitutionalClaim } from "@fides-anima/fpp-trust-core";
+import type { ConstitutionalHandshake } from "@fides-anima/fpp-trust-core";
+import { TrustGraphProtocol, TrustLevel } from "@fides-anima/fpp-trust-core";
+import { ScopedTrustStore } from "@fides-anima/fpp-trust-core";
+import type { MerkleBridge } from "@fides-anima/fpp-trust-core";
+import type { StrictModeManager } from "@fides-anima/fpp-trust-core";
+import type { ReplayCache } from "@fides-anima/fpp-trust-core";
+import type { QuorumSessionManager } from "@fides-anima/fpp-trust-core";
 import { resolveAdoptedAt } from "./resolve-adopted-at.js";
 import { registerStewardCli } from "./steward-cli.js";
 

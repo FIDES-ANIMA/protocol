@@ -11,7 +11,7 @@
     "id": "op_local_host"
   },
   "constitutionHash": "71bf60ad00000000000000000000000000000000000000000000000000000000",
-  "policyEngineVersion": "@ovrsr/fpp-enforcement-core@1.0.0",
+  "policyEngineVersion": "@fides-anima/fpp-enforcement-core@1.0.0",
   "prevHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "entryHash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
   "reason": "operator requested constitutional layer off (Law 2 corrigibility)",

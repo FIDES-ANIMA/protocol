@@ -23,7 +23,7 @@
 - Plan: `docs/plans/2026-07-19-safe-in-place-asset-updates.md` (Status: VERIFIED)
 
 ## Gotchas & Solutions
-- Problem: Nested `npm ci` in plugin dirs broke adapter resolution of `@ovrsr/fpp-tool-proxy`.
+- Problem: Nested `npm ci` in plugin dirs broke adapter resolution of `@fides-anima/fpp-tool-proxy`.
   Cause: Nested install rewrites the tree and drops workspace links.
   Fix: CI uses root `npm ci` only; assert with `scripts/assert-workspace-links.test.ts`.
 - Problem: ClawHub `suspicious.exposed_secret_literal` on `authorization: "fpp:v2:…"` domain separators (unrelated to this plan; uncommitted fix in protocol-core).

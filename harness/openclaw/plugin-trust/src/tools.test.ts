@@ -12,7 +12,7 @@ import {
   digest,
   publicKeyFromSeed,
   signMessage,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import { loadOrCreateIdentity } from "./identity.js";
 import { TrustGraphProtocol } from "./trust-graph.js";
 import { ConstitutionalHandshake } from "./handshake.js";

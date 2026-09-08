@@ -8,7 +8,7 @@
  * never reads OpenClaw package.json itself.
  */
 
-import { DIGEST_DOMAINS, digest } from "@ovrsr/fpp-protocol-core";
+import { DIGEST_DOMAINS, digest } from "@fides-anima/fpp-protocol-core";
 import type { FppPluginConfig } from "./config.js";
 import { CLASSIFICATION_IDS } from "./risk-classifier.js";
 
@@ -37,7 +37,7 @@ export type PackageBuildInput = {
 
 /** Default package identity for unit tests and library consumers without a harness. */
 export const DEFAULT_PACKAGE_BUILD: PackageBuildInput = {
-  name: "@ovrsr/fpp-enforcement-core",
+  name: "@fides-anima/fpp-enforcement-core",
   version: "1.0.0",
   pluginApi: "library",
   minGatewayVersion: "n/a",

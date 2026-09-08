@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env node
 /**
  * Codex PreToolUse hook CLI — stdin JSON → permissionDecision JSON.
  * Exit code 2 is an alternate deny signal; we prefer JSON for clarity.
@@ -9,8 +9,8 @@ import { createCodexRuntime, handleCodexPreToolUse } from "./adapter.js";
 import {
   workspaceFile,
   resolveWorkspaceRoot,
-} from "@ovrsr/fpp-protocol-core";
-import { assertConfigPathAllowed } from "@ovrsr/fpp-enforcement-core";
+} from "@fides-anima/fpp-protocol-core";
+import { assertConfigPathAllowed } from "@fides-anima/fpp-enforcement-core";
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];

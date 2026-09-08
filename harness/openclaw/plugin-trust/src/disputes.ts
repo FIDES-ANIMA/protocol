@@ -13,4 +13,4 @@ export {
   type DisputeRecord,
   type DisputeStatus,
   type DisputeVerb,
-} from "@ovrsr/fpp-trust-core";
+} from "@fides-anima/fpp-trust-core";

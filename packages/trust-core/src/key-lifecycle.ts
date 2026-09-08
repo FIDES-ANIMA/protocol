@@ -3,7 +3,7 @@
  * Conforms to docs/governance/KEY_GOVERNANCE.md (provisional).
  */
 
-import { canonicalize } from "@ovrsr/fpp-protocol-core";
+import { canonicalize } from "@fides-anima/fpp-protocol-core";
 import type { AgentIdentity } from "./identity.js";
 import { verifySignature } from "./identity.js";
 import type { TrustGraphProtocol } from "./trust-graph.js";

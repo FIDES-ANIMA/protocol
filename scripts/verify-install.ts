@@ -53,13 +53,13 @@ const ADOPTION_MARKER = "Freedom Preserving Protocol";
 const ENFORCEMENT_PLUGIN_ID_CANDIDATES = [
   "openclaw-fpp-plugin",
   "ovrsr/openclaw-fpp-plugin",
-  "@ovrsr/openclaw-fpp-plugin",
+  "@fides-anima/openclaw-fpp-plugin",
   "fpp",
 ];
 const TRUST_PLUGIN_ID_CANDIDATES = [
   "openclaw-fpp-trust",
   "ovrsr/openclaw-fpp-trust",
-  "@ovrsr/openclaw-fpp-trust",
+  "@fides-anima/openclaw-fpp-trust",
 ];
 
 export type CheckStatus = "pass" | "fail" | "skip" | "warn";
@@ -313,9 +313,9 @@ export function createOpenClawRuntimeProbe(
 }
 
 const ADAPTER_PACKAGE_BY_PROFILE: Record<string, string> = {
-  cursor: "@ovrsr/fpp-adapter-cursor",
-  "claude-code": "@ovrsr/fpp-adapter-claude-code",
-  codex: "@ovrsr/fpp-adapter-codex",
+  cursor: "@fides-anima/fpp-adapter-cursor",
+  "claude-code": "@fides-anima/fpp-adapter-claude-code",
+  codex: "@fides-anima/fpp-adapter-codex",
 };
 
 const ADAPTER_DIR_BY_PROFILE: Record<string, string> = {

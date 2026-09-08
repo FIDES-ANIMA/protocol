@@ -23,7 +23,7 @@ import {
   parseReceiptInclusionEvidence,
   type MerkleProof,
   type ReceiptInclusionEvidenceV1,
-} from "@ovrsr/fpp-protocol-core";
+} from "@fides-anima/fpp-protocol-core";
 import {
   verifyReceiptSignature,
   type SignedReceipt,

@@ -13,7 +13,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { verifyMerkleProofV2, computeMerkleRootV2 } from "@ovrsr/fpp-protocol-core";
+import { verifyMerkleProofV2, computeMerkleRootV2 } from "@fides-anima/fpp-protocol-core";
 import {
   collectReceiptLeaves,
   createReceiptProof,

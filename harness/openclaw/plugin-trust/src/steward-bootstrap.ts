@@ -5,7 +5,7 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { parseKeyRef } from "@ovrsr/fpp-protocol-core";
+import { parseKeyRef } from "@fides-anima/fpp-protocol-core";
 
 export type BootstrapInteractiveDeps = {
   isInteractive?: () => boolean;
