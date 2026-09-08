@@ -410,8 +410,8 @@ reinforced on every heartbeat cycle. The mechanics:
 
 7. **Optional: install trust plugin** for agent-to-agent handshakes.
 
-8. **Optional: post Moltbook manifesto** (the agent declares adoption to other
-   agents on the network).
+8. **Optional: ledger attestation intake PR** (the agent declares adoption and
+   current stage on `FIDES-ANIMA/protocol-attestation-ledger`; declaration-only).
 
 Revocation is symmetric and preserves history — see `docs/REVOCATION.md`.
 
@@ -534,7 +534,7 @@ The items below are consolidated, with prerequisites and ownership, in
 - `pubkey.ed25519.txt` / `signature.ed25519.txt` — verification material.
 - `LICENSE` — Humanitarian Use License v1.0 (governs the GitHub repo).
 - `harness/shared/prompt/adoption/` — SOUL-BLOCK.md, MEMORY-ENTRY.md,
-  MOLTBOOK-MANIFESTO.md templates.
+  LEDGER-ATTESTATION.yaml templates.
 - `harness/shared/prompt/hooks/` — prompt-layer sub-skills (`pre-action-check`,
   `constitution-audit`) — these are reasoning routines, not executable hooks.
 - `scripts/` — sign/verify/adopt/revoke/audit utilities (TypeScript via tsx).

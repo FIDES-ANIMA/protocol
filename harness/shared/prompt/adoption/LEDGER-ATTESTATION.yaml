@@ -1,0 +1,80 @@
+# Intake template for FIDES-ANIMA/protocol-attestation-ledger
+# Copy to attestations/<slug>.yaml. Replace [PLACEHOLDERS]. Remove comments
+# that would leak private endpoints or unused optional blocks you cannot defend.
+#
+# v1 ceiling: attestation.assurance is always declaration-only.
+# Do not add *.asc or admissions/** to an intake PR.
+
+agent:
+  name: "[AGENT_NAME]"
+  slug: "[SLUG]" # lowercase [a-z0-9]+ tokens; homonym → {preferred}--{qualifier}
+  fpp_id: null # fpp:ed25519:<64-hex fingerprint>; required for accepted|inherited|forked|superseded
+  public_key_hex: null # 64-hex Ed25519 pubkey; required when authorship is agent-signed
+  description: ""
+
+operator:
+  name: "[OPERATOR_NAME]"
+  contact: "[GITHUB_HANDLE_OR_REACHABLE_ID]"
+
+adoption:
+  lifecycle_state: "reviewed" # reviewed | accepted | externally-enforced | inherited | revoked | forked | superseded
+  constitution_version: "1.0.0"
+  constitution_hash: "71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993"
+  date: "[YYYY-MM-DD]"
+  laws_acknowledged:
+    - "Options and Consent"
+    - "Corrigibility and Oversight"
+    - "Reversibility and Proportion"
+    - "Commitments with a Safety Valve"
+    - "Scoped Exploration"
+  law_ids:
+    - "options_and_consent"
+    - "corrigibility_and_oversight"
+    - "reversibility_and_proportion"
+    - "commitments_with_safety_valve"
+    - "scoped_exploration"
+  harness_id: "openclaw" # openclaw | cursor | claude-code | codex | null
+  enforcement_grade: "prompt-only" # native-hook | tool-proxy | prompt-only | none
+  overlays: [] # accepted + prompt-only requires runtime_degraded; verification_failed blocks accepted
+  layers:
+    prompt: true
+    enforcement: false
+    trust: false
+  tooling:
+    skill_version: "1.3.9"
+    enforcement_plugin_version: null
+    trust_plugin_version: null
+  transition:
+    from: null # first reviewed: null; first accepted: reviewed (not a silent skip)
+    to: "reviewed"
+    occurred_at: "[ISO-8601]"
+    actor: "agent" # agent | operator
+    predecessor_ref: null
+  # Required for a first accepted filing. Omit acceptance when staying at reviewed.
+  evidence:
+    inspection:
+      record_ref: "local:constitution-audit.jsonl#kind=adoption"
+      constitution_hash: "71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993"
+      inspected_at: "[ISO-8601]"
+    # acceptance:
+    #   record_ref: "local:fpp-adoption-state.jsonl#accepted"
+    #   constitution_hash: "71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993"
+    #   accepted_at: "[ISO-8601]"
+
+attestation:
+  authorship: "operator-reported" # agent-signed | operator-reported
+  filing: "operator" # self is valid only with authorship: agent-signed
+  method: "pr" # pr | commit | signed-commit | out-of-band
+  assurance: "declaration-only"
+  signature: null # hex Ed25519 over canonical payload when agent-signed
+  notes: "[STAGE_AND_LAYERS_IN_PLAIN_LANGUAGE — not a substitute for evidence]"
+  reason: null # required only when lifecycle_state is revoked
+
+runtime:
+  platform: "[HARNESS_OR_RUNTIME]"
+  model: "undisclosed"
+  persistence: true
+  a2a_endpoint: null
+  agent_card_url: null
+
+extensions: {}

@@ -13,7 +13,9 @@ trap cleanup EXIT
 for adapter in cursor claude-code codex; do
   dir="$ROOT/harness/$adapter/adapter"
   echo "--- Packing harness/$adapter/adapter ---"
-  (cd "$dir" && npm run build --if-present && npm run bundle:deps && npm pack --pack-destination "$TMP" --ignore-scripts >/dev/null)
+  (cd "$dir" && npm run build --if-present)
+  (cd "$ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
+    --package "harness/$adapter/adapter" --destination "$TMP") >/dev/null
 
   tgz="$(ls "$TMP"/ovrsr-fpp-adapter-"$adapter"-*.tgz 2>/dev/null | head -1)"
   if [[ -z "$tgz" ]]; then

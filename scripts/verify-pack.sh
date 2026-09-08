@@ -120,8 +120,9 @@ if [[ "${SKIP_ISOLATED_INSTALL:-}" != "1" ]]; then
   trap cleanup EXIT
 
   for pkg in harness/openclaw/plugin harness/openclaw/plugin-trust; do
-    echo "Packing $pkg (prepack stages bundled cores)..."
-    (cd "$ROOT/$pkg" && npm pack --pack-destination "$TMP" >/dev/null)
+    echo "Packing $pkg (isolated pack embeds bundled cores)..."
+    (cd "$ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
+      --package "$pkg" --destination "$TMP") >/dev/null
   done
 
   for tgz in "$TMP"/ovrsr-openclaw-fpp-*.tgz; do

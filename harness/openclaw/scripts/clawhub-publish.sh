@@ -38,38 +38,34 @@ needs_tarball_publish() {
     || [[ "$(uname -s 2>/dev/null || true)" == CYGWIN* ]]
 }
 
-# Publish a code-plugin: dir on Unix, npm-pack tarball on Windows.
+# Publish a code-plugin from an isolated tarball so workspace cores are embedded.
+# In-repo `npm pack` / ClawHub's own pack omit bundled workspace packages (npm 10).
+# Windows also needs a pre-built tarball (clawhub spawnSync npm ENOENT).
 clawhub_package_publish() {
   local pkg_dir="$1" name="$2" ver="$3" sha="$4" changelog="$5"
-  local abs_dir="$REPO_ROOT/$pkg_dir"
+  local pack_tmp tgz
 
   if needs_tarball_publish; then
-    yellow "  [windows] packing $pkg_dir via npm pack (clawhub spawnSync npm workaround)"
-    local pack_out tgz
-    # prepack may print staging logs on stderr; take the last .tgz filename from stdout
-    pack_out="$(cd "$abs_dir" && npm pack --silent | tr -d '\r')" \
-      || die "npm pack failed in $pkg_dir"
-    tgz="$(printf '%s\n' "$pack_out" | grep '\.tgz$' | tail -1)"
-    [[ -n "$tgz" && -f "$abs_dir/$tgz" ]] || die "npm pack produced no tarball in $pkg_dir (got: ${tgz:-<empty>})"
-    (cd "$abs_dir" && clawhub package publish "$tgz" \
-      --family code-plugin \
-      --name "$name" \
-      --version "$ver" \
-      --source-repo "$SOURCE_REPO" \
-      --source-commit "$sha" \
-      --changelog "$changelog" \
-      --owner "$OWNER")
-    rm -f "$abs_dir/$tgz"
+    yellow "  [windows] packing $pkg_dir via isolated pack (clawhub spawnSync npm workaround)"
   else
-    (cd "$REPO_ROOT" && clawhub package publish "$pkg_dir/" \
-      --family code-plugin \
-      --name "$name" \
-      --version "$ver" \
-      --source-repo "$SOURCE_REPO" \
-      --source-commit "$sha" \
-      --changelog "$changelog" \
-      --owner "$OWNER")
+    yellow "  packing $pkg_dir via isolated pack (workspace bundledDependencies workaround)"
   fi
+
+  pack_tmp="$(mktemp -d)"
+  (cd "$REPO_ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
+    --package "$pkg_dir" --destination "$pack_tmp") \
+    || { rm -rf "$pack_tmp"; die "isolated pack failed in $pkg_dir"; }
+  tgz="$(ls "$pack_tmp"/*.tgz 2>/dev/null | head -1)"
+  [[ -n "$tgz" && -f "$tgz" ]] || { rm -rf "$pack_tmp"; die "isolated pack produced no tarball in $pkg_dir"; }
+  (cd "$pack_tmp" && clawhub package publish "$(basename "$tgz")" \
+    --family code-plugin \
+    --name "$name" \
+    --version "$ver" \
+    --source-repo "$SOURCE_REPO" \
+    --source-commit "$sha" \
+    --changelog "$changelog" \
+    --owner "$OWNER")
+  rm -rf "$pack_tmp"
 }
 
 usage() {
@@ -212,15 +208,15 @@ require_bundled_cores() {
   done
 
   bold "Verifying $label pack embeds bundled cores..."
-  (cd "$REPO_ROOT/$pkg_dir" && npm run bundle:deps)
-
-  # Real pack (not --dry-run): dry-run listings omit node_modules paths on some npm versions.
+  # npm pack inside a workspace omits bundled workspace packages (npm 10:
+  # "bundled files: 0"). Pack from an isolated copy so staged cores are embedded.
   local pack_tmp tgz listing
   pack_tmp="$(mktemp -d)"
-  (cd "$REPO_ROOT/$pkg_dir" && npm pack --pack-destination "$pack_tmp" --ignore-scripts >/dev/null) \
-    || { rm -rf "$pack_tmp"; die "$label npm pack failed"; }
+  (cd "$REPO_ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
+    --package "$pkg_dir" --destination "$pack_tmp") \
+    || { rm -rf "$pack_tmp"; die "$label isolated pack failed"; }
   tgz="$(ls "$pack_tmp"/*.tgz 2>/dev/null | head -1)"
-  [[ -n "$tgz" && -f "$tgz" ]] || { rm -rf "$pack_tmp"; die "$label npm pack produced no tarball"; }
+  [[ -n "$tgz" && -f "$tgz" ]] || { rm -rf "$pack_tmp"; die "$label isolated pack produced no tarball"; }
   listing="$(tar --force-local -tzf "$tgz" 2>/dev/null || tar -tzf "$tgz")"
   rm -rf "$pack_tmp"
 

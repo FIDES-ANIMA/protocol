@@ -21,11 +21,12 @@ npm_path() {
 smoke_one() {
   local pkg_dir="$1" expected_core="$2" label="$3"
   echo "=== Smoke: $label ==="
-  (cd "$ROOT/$pkg_dir" && npm run build --if-present && npm run bundle:deps)
+  (cd "$ROOT/$pkg_dir" && npm run build --if-present)
 
   local pack_dir="$TMP/pack-$label"
   mkdir -p "$pack_dir"
-  (cd "$ROOT/$pkg_dir" && npm pack --pack-destination "$(npm_path "$pack_dir")" --ignore-scripts >/dev/null)
+  (cd "$ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
+    --package "$pkg_dir" --destination "$(npm_path "$pack_dir")")
 
   local tgz
   tgz="$(ls "$pack_dir"/ovrsr-openclaw-fpp-*.tgz 2>/dev/null | head -1 || true)"

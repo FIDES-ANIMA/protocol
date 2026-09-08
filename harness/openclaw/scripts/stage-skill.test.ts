@@ -91,6 +91,7 @@ describe("stage-skill", () => {
     assert.ok(existsSync(join(outDir, "pubkey.ed25519.txt")));
     assert.ok(existsSync(join(outDir, "signature.ed25519.txt")));
     assert.ok(existsSync(join(outDir, "adoption", "SOUL-BLOCK.md")));
+    assert.ok(existsSync(join(outDir, "adoption", "LEDGER-ATTESTATION.yaml")));
     assert.ok(existsSync(join(outDir, "hooks", "pre-action-check", "SKILL.md")));
     assert.ok(
       existsSync(join(outDir, "hooks", "constitution-audit", "SKILL.md")),

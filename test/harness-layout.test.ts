@@ -21,6 +21,7 @@ const REQUIRED_PATHS = [
   "harness/shared/prompt/hooks/constitution-audit/SKILL.md",
   "harness/shared/prompt/adoption/SOUL-BLOCK.md",
   "harness/shared/prompt/adoption/MEMORY-ENTRY.md",
+  "harness/shared/prompt/adoption/LEDGER-ATTESTATION.yaml",
   "harness/openclaw/plugin/package.json",
   "harness/openclaw/plugin-trust/package.json",
   "harness/openclaw/skill/ALLOWLIST",
@@ -148,6 +149,17 @@ describe("canonical harness directory layout", () => {
     assert.doesNotMatch(skill, /npx tsx scripts\/stage-skill\.ts/);
     assert.doesNotMatch(skill, /(?:^|\n)\s*clawhub skill publish \./);
     assert.match(skill, /[Nn]ever publish the monorepo root|[Dd]o \*\*not\*\*.*monorepo root/);
+  });
+
+  it("skill adoption step files a ledger intake PR, not a Moltbook post", () => {
+    const skill = readFileSync(
+      join(root, "harness", "shared", "prompt", "SKILL.md"),
+      "utf8",
+    );
+    assert.match(skill, /FIDES-ANIMA\/protocol-attestation-ledger/);
+    assert.match(skill, /LEDGER-ATTESTATION\.yaml/);
+    assert.match(skill, /declaration-only/);
+    assert.doesNotMatch(skill, /post to Moltbook|MOLTBOOK-MANIFESTO|m\/constitution/);
   });
 
   it("active governance docs use canonical harness paths", () => {

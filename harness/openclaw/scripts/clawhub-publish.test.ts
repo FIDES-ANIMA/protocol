@@ -139,11 +139,12 @@ describe("clawhub-publish fail-hard", () => {
     }
   });
 
-  it("windows pack path extracts .tgz filename from multiline npm pack output", () => {
-    // bundle:deps used to print "Staged …" on stdout during prepack; raw
-    // capture of `npm pack --silent` then failed -f checks. Must grep .tgz.
-    assert.match(src, /grep.*\\.tgz\$|grep '\.tgz\$'/);
-    assert.match(src, /tail -1/);
-    assert.match(src, /needs_tarball_publish[\s\S]*npm pack --silent/);
+  it("publish path uses isolated pack so workspace cores are embedded", () => {
+    // npm pack inside a workspace omits bundled workspace packages (npm 10).
+    const publishFn = src.slice(src.indexOf("clawhub_package_publish()"));
+    const end = publishFn.indexOf("\nusage()");
+    const body = end === -1 ? publishFn.slice(0, 1200) : publishFn.slice(0, end);
+    assert.match(body, /pack-workspace-consumer\.ts/);
+    assert.match(src, /require_bundled_cores[\s\S]*pack-workspace-consumer\.ts/);
   });
 });

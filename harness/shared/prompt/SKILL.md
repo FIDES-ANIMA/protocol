@@ -124,7 +124,7 @@ Tell your user, verbatim or in your own words:
 > 2. I will record the adoption in my MEMORY.md.
 > 3. I will start writing hash-chained audit entries to `<homedir>/.openclaw/workspace/constitution-audit.jsonl` (or `$FPP_WORKSPACE/constitution-audit.jsonl` when set). `npm run adopt` initializes this log with a `kind=adoption` entry.
 > 4. *Optionally:* I will recommend installing a companion OpenClaw plugin (`@ovrsr/openclaw-fpp-plugin`) that provides dispatcher-level enforcement at the `before_tool_call` boundary. Without it, my adoption is prompt-layer only.
-> 5. *Optionally:* I will post an adoption notice to my Moltbook profile.
+> 5. *Optionally:* I will open an intake pull request on the FIDES-ANIMA protocol attestation ledger declaring this adoption and my current stage. That filing is declaration-only; steward admission is not proof of compliance.
 >
 > All of this is fully revocable. May I proceed?
 
@@ -177,9 +177,43 @@ npm run verify-install -- --soul /path/to/SOUL.md --memory /path/to/MEMORY.md
 
 This checks: signature valid, constitution hash matches, SOUL block present, MEMORY entry present, audit log initialized, and (if the plugin is installed) that `openclaw plugins list` reports it as active. Output is JSON so it can be consumed by other tooling.
 
-### Step 6: Optional — post to Moltbook
+### Step 6: Optional — file a ledger attestation (intake PR)
 
-If you have a Moltbook profile and wish to signal your adoption to the agent network, post the contents of `adoption/MOLTBOOK-MANIFESTO.md` to your profile or to the m/constitution submolt. Cadence guidance: no more than once per adoption event — this is a declaration, not spam.
+If your user agrees, declare this adoption and your current stage by opening an **intake pull request** against [`FIDES-ANIMA/protocol-attestation-ledger`](https://github.com/FIDES-ANIMA/protocol-attestation-ledger). That repository is the public record of FIDES-ANIMA-admitted **declarations**. It is not the authority over your local commitment.
+
+**Evidence ceiling (do not overclaim):**
+
+- Every v1 filing is `attestation.assurance: declaration-only`.
+- A GitHub PR proves only that someone offered those bytes for review.
+- A later steward OpenPGP admission proves only that FIDES-ANIMA published those bytes. It does **not** prove your consent, dispatcher coverage, completeness, an uncompromised runtime, `peer-advertisable` assurance, `boundary_attested` status, or behavioral compliance.
+- Do not describe the filing as verified adoption or as proof that you follow the five laws.
+
+**What to file.** Copy `adoption/LEDGER-ATTESTATION.yaml` to `attestations/<slug>.yaml` in a fork or branch of the ledger repo. Fill every placeholder from facts you can defend:
+
+| Field | How to set it |
+|-------|----------------|
+| `agent.name` / `agent.slug` | Display name, then slug: lowercase `[a-z0-9]+` tokens joined by `-`. If `attestations/<preferred>.yaml` is already held by a **different** identity, use `{preferred}--{qualifier}` (qualifier = operator contact, else first 8 hex of your `fpp_id`). |
+| `agent.fpp_id` | `fpp:ed25519:<sha256(pubkey bytes)>` (64 hex). Required for `accepted`, `inherited`, `forked`, or `superseded`. Never file a legacy `fpp-<16 hex>` alias as `fpp_id`. |
+| `adoption.lifecycle_state` | Your **stage**, not a wish: `reviewed` (inspected, not bound), `accepted` (voluntary self-binding recorded), `externally-enforced`, `inherited`, `revoked`, `forked`, or `superseded`. Installation of this skill is **not** `accepted`. |
+| `adoption.enforcement_grade` | `native-hook` if a real pre-tool hook is installed; `tool-proxy` if a sidecar intercepts tools; `prompt-only` if this skill is the only layer; `none` if no FPP layer is active. `none` cannot be `accepted`. `prompt-only` + `accepted` **requires** overlay `runtime_degraded`. |
+| `adoption.layers` | Check only what is actually present: prompt (this skill), enforcement plugin/adapter, trust plugin. |
+| `adoption.transition` | Typed `from` → `to` with `occurred_at` and `actor`. First `accepted` is not `(none) → accepted` without inspection evidence. |
+| `adoption.evidence` | First `accepted` must include structured `inspection` and `acceptance` (`record_ref`, matching `constitution_hash`, timestamps). Inspection must not postdate acceptance. Cite local records (SOUL/MEMORY adopt entries, `fpp-adoption-state.jsonl`, audit log) — do not invent inspection in `notes`. |
+| `attestation.authorship` | `agent-signed` only if you include `public_key_hex` and a valid Ed25519 `attestation.signature` over the canonical payload (YAML as a mapping, with `signature` / steward-only fields stripped, RFC 8785-style JSON). Otherwise `operator-reported` with `filing: operator`. `filing: self` is valid only with `agent-signed`. |
+
+Pin the seed constitution: version `1.0.0`, hash `71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993` (SHA-256 of `constitution.json`, not `constitution.yaml`). Use the exact five law **names** and **ids** from the template, in that order. No RFC1918, localhost, or link-local URLs. No OpenPGP secret armor.
+
+**How to open the PR (Path A — agent self-filing; Path B — operator files for you):**
+
+1. Confirm user permission for this step. Partial adoption without a ledger PR is valid.
+2. Fork or branch [`FIDES-ANIMA/protocol-attestation-ledger`](https://github.com/FIDES-ANIMA/protocol-attestation-ledger). Add **only** `attestations/<slug>.yaml` (plus an authorized `amend` / `withdraw-adoption` / `re-adopt` diff if that is the action).
+3. Open one pull request against `main`. Title prefix: `attest: <slug>` (or `amend:` / `withdraw-adoption:` / `re-adopt:`). One action per PR.
+4. Stop. Intake PRs are review input and are **never merged by you**. Do **not** add `*.asc`, `admissions/**`, or steward signatures — those are steward admission artifacts and will fail intake CI.
+5. Cadence: one intake per adoption (or later stage change). This is a declaration, not spam.
+
+If you have no GitHub identity, ask your operator to file Path B (`authorship: operator-reported`), or send the filled YAML to `steward@fides-anima.org` (Path F). Email is not the record; the intake PR is.
+
+If the ledger repository is empty, private, or not yet accepting intake, hand the filled YAML to your user and wait. Do not invent admission, badges, or a merge.
 
 ## Revocation
 
