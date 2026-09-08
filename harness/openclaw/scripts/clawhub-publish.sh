@@ -210,23 +210,33 @@ require_bundled_cores() {
   bold "Verifying $label pack embeds bundled cores..."
   # npm pack inside a workspace omits bundled workspace packages (npm 10:
   # "bundled files: 0"). Pack from an isolated copy so staged cores are embedded.
-  local pack_tmp tgz listing
+  local pack_tmp tgz
   pack_tmp="$(mktemp -d)"
   (cd "$REPO_ROOT" && npx tsx scripts/pack-workspace-consumer.ts \
     --package "$pkg_dir" --destination "$pack_tmp") \
     || { rm -rf "$pack_tmp"; die "$label isolated pack failed"; }
   tgz="$(ls "$pack_tmp"/*.tgz 2>/dev/null | head -1)"
   [[ -n "$tgz" && -f "$tgz" ]] || { rm -rf "$pack_tmp"; die "$label isolated pack produced no tarball"; }
-  listing="$(tar --force-local -tzf "$tgz" 2>/dev/null || tar -tzf "$tgz")"
-  rm -rf "$pack_tmp"
+  # Grep a listing file — `echo "$listing"` can truncate or fail ARG_MAX.
+  local listing_file="$pack_tmp/listing.txt"
+  tar --force-local -tzf "$tgz" >"$listing_file" 2>/dev/null \
+    || tar -tzf "$tgz" >"$listing_file"
+  [[ -s "$listing_file" ]] || { rm -rf "$pack_tmp"; die "$label tar listing empty for $tgz"; }
 
   for name in "${expected[@]}"; do
     local short="${name#@ovrsr/}"
-    echo "$listing" | grep -q "node_modules/@ovrsr/$short/" \
-      || die "$label pack missing bundled path node_modules/@ovrsr/$short/ — refuse publish"
+    grep -q "node_modules/@ovrsr/$short/" "$listing_file" \
+      || grep -qE "node_modules/@ovrsr/${short}(/|$)" "$listing_file" \
+      || {
+        red "ERROR: $label pack missing bundled path node_modules/@ovrsr/$short/ — refuse publish"
+        grep "node_modules/@ovrsr/" "$listing_file" | head -20 >&2 || true
+        rm -rf "$pack_tmp"
+        exit 1
+      }
   done
-  echo "$listing" | grep -q "dist/index.js" \
-    || die "$label pack missing dist/index.js"
+  grep -q "dist/index.js" "$listing_file" \
+    || { rm -rf "$pack_tmp"; die "$label pack missing dist/index.js"; }
+  rm -rf "$pack_tmp"
   green "  ✓ $label tarball embeds: ${expected[*]}"
 }
 

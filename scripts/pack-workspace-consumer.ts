@@ -64,6 +64,99 @@ function runNpm(
   };
 }
 
+function toTarPath(p: string): string {
+  return resolve(p).replace(/\\/g, "/");
+}
+
+function runTar(
+  args: string[],
+  cwd?: string,
+): { status: number | null; stdout: string; stderr: string } {
+  // Drive-letter archive paths on Windows need --force-local or GNU tar
+  // treats "C:" as a remote host. Avoid `tar -C <drive>:...` entirely.
+  const prefix = process.platform === "win32" ? ["--force-local"] : [];
+  const r = spawnSync("tar", [...prefix, ...args], {
+    cwd,
+    encoding: "utf8",
+    shell: false,
+  });
+  return {
+    status: r.status,
+    stdout: r.stdout ?? "",
+    stderr: r.stderr ?? "",
+  };
+}
+
+export function listTarball(tgzPath: string): string {
+  const archive = toTarPath(tgzPath);
+  const force = runTar(["-tzf", archive]);
+  if (force.status === 0 && force.stdout.length > 0) {
+    return force.stdout;
+  }
+  const plain = spawnSync("tar", ["-tzf", archive], {
+    encoding: "utf8",
+    shell: false,
+  });
+  return `${plain.stdout ?? ""}${plain.stderr ?? ""}`;
+}
+
+function bundledNeedle(name: string): string {
+  const short = name.startsWith("@ovrsr/") ? name.slice("@ovrsr/".length) : name;
+  return `node_modules/@ovrsr/${short}/`;
+}
+
+function listingHasBundled(listing: string, name: string): boolean {
+  const needle = bundledNeedle(name);
+  if (listing.includes(needle)) return true;
+  // Directory-only entry without a trailing slash
+  const bare = needle.slice(0, -1);
+  return listing.split(/\r?\n/).some((line) => {
+    const n = line.replace(/^\.?\//, "");
+    return n === bare || n.endsWith(`/${bare}`) || n.endsWith(`/${bare}/`);
+  });
+}
+
+/**
+ * npm pack (even outside a workspace) still drops some bundled workspace
+ * copies on npm 10. Unpack, copy staged cores, and rewrite the tarball.
+ */
+function embedStagedModules(
+  tgzPath: string,
+  isolDir: string,
+  bundled: string[],
+): void {
+  const unpack = mkdtempSync(join(tmpdir(), "fpp-unpack-"));
+  try {
+    const extract = runTar(["-xzf", toTarPath(tgzPath)], unpack);
+    if (extract.status !== 0) {
+      throw new Error(
+        `Failed to unpack ${tgzPath}:\n${extract.stdout}\n${extract.stderr}`,
+      );
+    }
+    const pkgRoot = existsSync(join(unpack, "package"))
+      ? join(unpack, "package")
+      : unpack;
+    for (const name of bundled) {
+      const parts = name.startsWith("@") ? name.split("/") : [name];
+      const src = join(isolDir, "node_modules", ...parts);
+      const dest = join(pkgRoot, "node_modules", ...parts);
+      mkdirSync(dirname(dest), { recursive: true });
+      rmSync(dest, { recursive: true, force: true });
+      cpSync(src, dest, { recursive: true });
+    }
+    rmSync(tgzPath, { force: true });
+    const top = existsSync(join(unpack, "package")) ? "package" : ".";
+    const pack = runTar(["-czf", toTarPath(tgzPath), top], unpack);
+    if (pack.status !== 0) {
+      throw new Error(
+        `Failed to rewrite ${tgzPath}:\n${pack.stdout}\n${pack.stderr}`,
+      );
+    }
+  } finally {
+    rmSync(unpack, { recursive: true, force: true });
+  }
+}
+
 function copyEntry(src: string, dest: string): void {
   const destPath = dest.replace(/[/\\]$/, "");
   mkdirSync(dirname(destPath), { recursive: true });
@@ -163,6 +256,21 @@ export async function packWorkspaceConsumer(
     if (!existsSync(tgzPath)) {
       throw new Error(
         `npm pack did not write ${tgz} in ${destination}:\n${pack.stdout}\n${pack.stderr}`,
+      );
+    }
+
+    embedStagedModules(tgzPath, isol, bundled);
+
+    const listing = listTarball(tgzPath);
+    const missing = bundled.filter((name) => !listingHasBundled(listing, name));
+    if (missing.length > 0) {
+      const sample = listing
+        .split(/\r?\n/)
+        .filter((l) => l.includes("node_modules/@ovrsr/"))
+        .slice(0, 20)
+        .join("\n");
+      throw new Error(
+        `Isolated pack missing ${missing.join(", ")} in ${tgz}\n${sample}`,
       );
     }
     return tgzPath;

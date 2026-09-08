@@ -68,6 +68,8 @@ describe("pack-workspace-consumer", { concurrency: false }, () => {
     const listing = tarList(tgz);
     assert.match(listing, /node_modules\/@ovrsr\/fpp-protocol-core\//);
     assert.match(listing, /node_modules\/@ovrsr\/fpp-trust-core\//);
+    assert.match(listing, /node_modules\/@ovrsr\/fpp-enforcement-core\//);
+    assert.match(listing, /node_modules\/@ovrsr\/fpp-steward-auth-core\//);
     assert.match(listing, /dist\/index\.js/);
   });
 });
