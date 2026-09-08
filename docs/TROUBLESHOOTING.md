@@ -196,6 +196,7 @@ npm run verify
 Do **not** adopt this constitution. Possible causes:
 
 - The `constitution.json` was modified after signing. Recompute the hash and compare with the expected `71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993`.
+- Line endings only: an LF checkout hashes as `bc764d3c…` even though the JSON text is unchanged. The signed seed is the CRLF serialization. Confirm `.gitattributes` contains `constitution.json text eol=crlf` and that the working-tree file contains `\r\n`.
 - The package was tampered with in transit (ClawHub or registry compromise). Re-download from the upstream source.
 - The `pubkey.ed25519.txt` was swapped. Compare against the publisher's published key.
 

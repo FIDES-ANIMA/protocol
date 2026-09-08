@@ -41,14 +41,14 @@ import {
 } from "./adoption-state.ts";
 import { resolveEnforcementGradeForProfile } from "./safe-append.ts";
 import { workspaceFile, absolutizeWorkspacePath } from "./skill-lib/index.ts";
+import { SEED_CONSTITUTION_HASH } from "./verify-constitution.ts";
 
 ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(__dirname, "..");
 
-const DEFAULT_EXPECTED_CONSTITUTION_HASH =
-  "71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993";
+const DEFAULT_EXPECTED_CONSTITUTION_HASH = SEED_CONSTITUTION_HASH;
 const ADOPTION_MARKER = "Freedom Preserving Protocol";
 const ENFORCEMENT_PLUGIN_ID_CANDIDATES = [
   "openclaw-fpp-plugin",

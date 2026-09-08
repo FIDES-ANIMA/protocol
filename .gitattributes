@@ -1,0 +1,4 @@
+# The published seed hash 71bf60ad… is SHA-256 of the CRLF serialization of
+# constitution.json. Without this pin, Linux checkouts hash as LF (bc764d3c…)
+# and Ed25519 verification fails even though the JSON text is unchanged.
+constitution.json text eol=crlf
