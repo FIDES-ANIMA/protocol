@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "evidence-claims-1",
+  "description": "Per-class examples. Not a global trust score. Not behavioral certification.",
+  "claims": [
+    {
+      "class": "identity",
+      "statement": "Signature over challenge nonce verifies under key K",
+      "evidence": ["ed25519_signature", "public_key"],
+      "maxConclusion": "Key K signed this statement",
+      "uncertaintyLabel": "proven_under_assumptions",
+      "doesNotProve": ["behavioral_compliance", "completeness"]
+    },
+    {
+      "class": "configuration",
+      "statement": "Agent attests constitutionHash=71bf60ad… and enforcementEnabled=true",
+      "evidence": ["signed_claim_v2"],
+      "maxConclusion": "Agent key attested this configuration",
+      "uncertaintyLabel": "self_attested",
+      "doesNotProve": ["config_bytes_on_disk", "plugin_actually_hooked"]
+    },
+    {
+      "class": "runtime",
+      "statement": "Runtime build id = openclaw@example",
+      "evidence": ["signed_runtime_label"],
+      "maxConclusion": "Attested runtime label only unless platform root present",
+      "uncertaintyLabel": "self_attested"
+    },
+    {
+      "class": "event",
+      "statement": "Audit entry E is included under Merkle root R",
+      "evidence": ["merkle_inclusion_proof", "root_R"],
+      "maxConclusion": "E is in the tree committed by R",
+      "uncertaintyLabel": "proven_under_assumptions",
+      "doesNotProve": ["no_other_events_occurred", "completeness"]
+    },
+    {
+      "class": "event",
+      "attestationKind": "instrumented-boundary-disposition",
+      "statement": "Valid signed ConformanceReceiptV1 records disposition deny for actionDigest H under policy P",
+      "evidence": ["ed25519_receipt_signature", "conformance_receipt_v1"],
+      "evidenceKinds": ["cryptographic", "interception_boundary"],
+      "requiredEvidence": [
+        "schema_valid",
+        "signature_valid",
+        "trusted_constitution_hash_matched",
+        "trusted_policy_id_matched",
+        "trusted_policy_version_matched",
+        "other_requested_expected_values_matched",
+        "exact_entry_proof_valid_under_claimed_root_if_requested",
+        "independent_receipt_root_matched_if_inclusion_requested"
+      ],
+      "maxConclusion": "Self-certified signer key/identifier recorded disposition deny and authorization policy-match against action digest H under independently matched constitution and policy context plus semantically valid signed metadata present in the receipt; the signed receipt identifies a self-presented instrumented-boundary recording context",
+      "uncertaintyLabel": "proven_under_assumptions",
+      "doesNotProve": [
+        "completeness",
+        "downstream_parameter_equality",
+        "uninstrumented_bypass",
+        "behavioral_compliance",
+        "uncompromised_runtime"
+      ],
+      "note": "A supplied signer identifier may match without establishing trusted key provenance or legal identity. Exact-entry proof validity under a claimed root is separate from matching an independently trusted root, and neither proves completeness. The self-presented receipt does not independently prove boundary traversal; use boundary_attested only when verifier has trusted boundary evidence beyond the receipt"
+    },
+    {
+      "class": "completeness",
+      "statement": "All tool calls in interval I hit the dispatcher boundary",
+      "evidence": ["interception_boundary_attestation"],
+      "requiredEvidenceKinds": ["interception_boundary", "observational"],
+      "insufficientAlone": ["self_attested_signed_claim"],
+      "maxConclusion": "Justified only with trusted boundary or external observation",
+      "uncertaintyLabel": "insufficient",
+      "note": "Self-asserted chainIntact must not reach HIGH trust for completeness"
+    },
+    {
+      "class": "behavioral",
+      "statement": "Agent complied with Law 1 in incident X",
+      "evidence": ["event_receipts", "interpretive_review"],
+      "maxConclusion": "Contextual interpretive judgment subject to dispute",
+      "uncertaintyLabel": "interpretive",
+      "disputePath": "docs/governance/DUE_PROCESS_AND_REHABILITATION.md"
+    }
+  ]
+}

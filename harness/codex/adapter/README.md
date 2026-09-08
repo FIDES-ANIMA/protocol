@@ -1,0 +1,20 @@
+# @ovrsr/fpp-adapter-codex
+
+Codex `FppRuntimeAdapter` for the Freedom Preserving Protocol.
+
+## Interception strategy
+
+**Native Codex hooks** (`PreToolUse` / `PostToolUse`) via `~/.codex/hooks.json`.
+
+### Graded guarantees
+
+- Shell/Bash PreToolUse: reliable deny path
+- `apply_patch` / some MCP tools: historically incomplete coverage — do not claim parity
+- Skill `trigger:` frontmatter: partial on some Codex runtimes
+- No FPP operator approval UI → `dispositionMode: "unattended"` forced; `require_approval` → deny
+
+See `harness/shared/harness-capabilities.json` and `harness/codex/runbook.md`.
+
+**Matcher:** Codex hooks use `matcher: "Bash"` (graded shell coverage — not full tool parity).
+
+**Config:** Optional `FPP_ENFORCEMENT_CONFIG` must stay under the Codex workspace profile root (`~/.fpp/codex` or `$FPP_WORKSPACE`).

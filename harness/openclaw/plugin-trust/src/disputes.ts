@@ -1,0 +1,16 @@
+export {
+  DisputeLedger,
+  disputeStatusForPolicy,
+  fileAppeal,
+  openChallenge,
+  recordCorrection,
+  recordRehabilitation,
+  recordRemediation,
+  requestEvidence,
+  resolveDispute,
+  submitCounterEvidence,
+  type DisputeCase,
+  type DisputeRecord,
+  type DisputeStatus,
+  type DisputeVerb,
+} from "@ovrsr/fpp-trust-core";

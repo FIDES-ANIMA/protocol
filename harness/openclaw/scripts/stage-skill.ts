@@ -1,0 +1,265 @@
+/**
+ * stage-skill.ts — build an OpenClaw-only ClawHub skill root from an allowlist.
+ *
+ * Usage:
+ *   npx tsx harness/openclaw/scripts/stage-skill.ts [--out harness/openclaw/skill-dist] [--repo-root .]
+ *
+ * Copies only paths listed in harness/openclaw/skill/ALLOWLIST into the output directory.
+ * Refuses to leave the stage if forbidden monorepo paths would be present.
+ */
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  cpSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
+import { spawnSync } from "node:child_process";
+import { join, dirname, resolve, relative, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_ROOT = resolve(__dirname, "../../..");
+
+/** Windows often returns EBUSY while another handle still holds a directory. */
+export function rmSyncRetry(
+  path: string,
+  opts: { recursive?: boolean; force?: boolean } = {},
+  attempts = 8,
+): void {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      rmSync(path, opts);
+      return;
+    } catch (err) {
+      last = err;
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? String((err as { code: unknown }).code)
+          : "";
+      if (code !== "EBUSY" && code !== "EPERM" && code !== "ENOTEMPTY") {
+        throw err;
+      }
+      const waitMs = 25 * (i + 1) * (i + 1);
+      const end = Date.now() + waitMs;
+      while (Date.now() < end) {
+        /* busy-wait: avoid async in sync staging path */
+      }
+    }
+  }
+  throw last;
+}
+
+export const FORBIDDEN_PATH_PREFIXES = [
+  "adapters/",
+  "plugin/",
+  "plugin-trust/",
+  "harness/openclaw/plugin/",
+  "harness/openclaw/plugin-trust/",
+  "harness/cursor/",
+  "harness/claude-code/",
+  "harness/codex/",
+  "packages/",
+  "test/",
+  "assurance-artifacts/",
+  "docs/plans/",
+  "MASTER_CONTEXT.md",
+  "scripts/clawhub-publish.sh",
+  "scripts/package-reproducibility.ts",
+  "scripts/rfc-citation-check.ts",
+  "scripts/bundle-workspace-deps.ts",
+  "harness/openclaw/scripts/clawhub-publish.sh",
+] as const;
+
+export type StageSkillOptions = {
+  repoRoot?: string;
+  outDir?: string;
+  allowlistPath?: string;
+  /** After staging, run `npm install` in the skill root so @noble/* resolves. */
+  installDeps?: boolean;
+};
+
+export type StageSkillResult = {
+  outDir: string;
+  files: string[];
+  depsInstalled?: boolean;
+};
+
+/**
+ * Install skill package.json dependencies into a staged (or host) skill root.
+ * Fails loudly if npm cannot install — verify scripts need @noble/ed25519.
+ */
+export function installSkillRuntimeDeps(skillRoot: string): void {
+  const root = resolve(skillRoot);
+  const pkgPath = join(root, "package.json");
+  if (!existsSync(pkgPath)) {
+    throw new Error(
+      `Cannot install skill deps: package.json missing at ${pkgPath}`,
+    );
+  }
+  const result = spawnSync("npm", ["install", "--omit=dev"], {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `npm install failed in ${root} (skill runtime deps).\n` +
+        `${result.stderr || result.stdout || "no output"}\n` +
+        `Run \`npm install\` in the skill directory, then retry verify.`,
+    );
+  }
+}
+
+function walkRelative(dir: string, base = dir): string[] {
+  const out: string[] = [];
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    const rel = relative(base, full).replace(/\\/g, "/");
+    if (statSync(full).isDirectory()) {
+      out.push(...walkRelative(full, base));
+    } else {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+export function readAllowlist(allowlistPath: string): string[] {
+  const raw = readFileSync(allowlistPath, "utf8");
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+}
+
+export function assertNoForbiddenPaths(relativePaths: string[]): void {
+  for (const p of relativePaths) {
+    const norm = p.replace(/\\/g, "/");
+    for (const prefix of FORBIDDEN_PATH_PREFIXES) {
+      const bare = prefix.replace(/\/$/, "");
+      if (
+        norm === prefix ||
+        norm === bare ||
+        norm.startsWith(prefix) ||
+        (prefix.endsWith("/") && norm.startsWith(prefix))
+      ) {
+        throw new Error(
+          `forbidden path staged: ${norm} (matches ${prefix})`,
+        );
+      }
+    }
+  }
+}
+
+function expandAllowlistEntry(
+  repoRoot: string,
+  entry: string,
+): { src: string; destRel: string; isDir: boolean }[] {
+  const norm = entry.replace(/\\/g, "/");
+  // Flatten harness-owned sources back to the ClawHub skill root.
+  const destOverride: Record<string, string> = {
+    "harness/shared/prompt/SKILL.md": "SKILL.md",
+    "harness/shared/prompt/adoption": "adoption",
+    "harness/shared/prompt/hooks": "hooks",
+    "harness/openclaw/skill/package.json": "package.json",
+    "harness/openclaw/skill/README.md": "README.md",
+    "harness/openclaw/scripts/skill-self-check.ts": "scripts/skill-self-check.ts",
+  };
+  if (norm.endsWith("/**")) {
+    const dirRel = norm.slice(0, -3);
+    const src = join(repoRoot, dirRel);
+    if (!existsSync(src)) {
+      throw new Error(`allowlist directory missing: ${dirRel}`);
+    }
+    return [{ src, destRel: destOverride[dirRel] ?? dirRel, isDir: true }];
+  }
+  const src = join(repoRoot, norm);
+  if (!existsSync(src)) {
+    throw new Error(`allowlist path missing: ${norm}`);
+  }
+  const destRel = destOverride[norm] ?? norm;
+  return [{ src, destRel, isDir: statSync(src).isDirectory() }];
+}
+
+export function stageSkill(opts: StageSkillOptions = {}): StageSkillResult {
+  const repoRoot = resolve(opts.repoRoot ?? DEFAULT_ROOT);
+  const outDir = resolve(
+    opts.outDir ?? join(repoRoot, "harness", "openclaw", "skill-dist"),
+  );
+  const allowlistPath = resolve(
+    opts.allowlistPath ??
+      join(repoRoot, "harness", "openclaw", "skill", "ALLOWLIST"),
+  );
+
+  if (!existsSync(allowlistPath)) {
+    throw new Error(`ALLOWLIST not found: ${allowlistPath}`);
+  }
+
+  const entries = readAllowlist(allowlistPath);
+  if (entries.length === 0) {
+    throw new Error("ALLOWLIST is empty");
+  }
+
+  rmSyncRetry(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+
+  for (const entry of entries) {
+    for (const item of expandAllowlistEntry(repoRoot, entry)) {
+      const dest = join(outDir, item.destRel);
+      mkdirSync(dirname(dest), { recursive: true });
+      cpSync(item.src, dest, { recursive: item.isDir });
+    }
+  }
+
+  let depsInstalled = false;
+  if (opts.installDeps) {
+    installSkillRuntimeDeps(outDir);
+    depsInstalled = true;
+  }
+
+  const files = walkRelative(outDir).filter(
+    (f) => f !== ".skill-stage.json" && !f.startsWith("node_modules/"),
+  );
+  assertNoForbiddenPaths(files);
+
+  const stamp = {
+    generatedAt: new Date().toISOString(),
+    files: files.sort(),
+    depsInstalled,
+  };
+  writeFileSync(join(outDir, ".skill-stage.json"), JSON.stringify(stamp, null, 2));
+
+  return { outDir, files: stamp.files, depsInstalled };
+}
+
+function parseArgs(argv: string[]): StageSkillOptions {
+  const opts: StageSkillOptions = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--out" && argv[i + 1]) {
+      opts.outDir = argv[++i];
+    } else if (a === "--repo-root" && argv[i + 1]) {
+      opts.repoRoot = argv[++i];
+    } else if (a === "--allowlist" && argv[i + 1]) {
+      opts.allowlistPath = argv[++i];
+    } else if (a === "--install-deps") {
+      opts.installDeps = true;
+    }
+  }
+  return opts;
+}
+
+const isDirect =
+  process.argv[1] &&
+  normalize(fileURLToPath(import.meta.url)) === normalize(resolve(process.argv[1]));
+
+if (isDirect) {
+  const result = stageSkill(parseArgs(process.argv.slice(2)));
+  console.log(`Staged ${result.files.length} files → ${result.outDir}`);
+}

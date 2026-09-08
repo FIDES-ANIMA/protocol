@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx harness/codex/adapter/src/hook-cli.ts",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

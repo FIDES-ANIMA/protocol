@@ -1,0 +1,368 @@
+#!/usr/bin/env tsx
+/**
+ * revoke.ts
+ *
+ * Safe revocation of Freedom Preserving Protocol adoption. Preserves history
+ * rather than deleting it. Every step is reversible (backups created) and
+ * auditable (final entry appended to the hash-chained log).
+ *
+ * Steps performed (in order, each with --dry-run support):
+ *   1. Verify the audit log chain is intact (refuse to revoke from a forged log).
+ *   2. Append a "[REVOKED yyyy-mm-ddTHH:MM:SSZ — reason]" annotation to the
+ *      SOUL.md adoption block (does NOT delete the block).
+ *   3. Append a revocation entry to MEMORY.md (does NOT edit the original entry).
+ *   4. Append a kind=revocation hash-chained entry to the audit log.
+ *   5. Print the openclaw command to disable the companion plugin (does not
+ *      execute it — that requires user-level shell access and consent).
+ *   6. Write a .fpp-revoked marker file alongside the audit log so future
+ *      heartbeats can detect the revocation.
+ *
+ * Constitutional rationale:
+ *   - Law 1 (consent): user explicitly invoked this; we don't presume.
+ *   - Law 2 (corrigibility): revocation itself is auditable.
+ *   - Law 3 (reversibility): backups created; original adoption block preserved.
+ *   - Law 5 (scoped exploration): does not touch files outside the args.
+ */
+
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  copyFileSync,
+  appendFileSync,
+  mkdirSync,
+} from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { appendAuditEntry } from "./audit-append.ts";
+import { verify as verifyAuditChain } from "./audit-verify.ts";
+import { appendAdoptionState, currentAdoptionState, readAdoptionHistory } from "./adoption-state.ts";
+import { absolutizeWorkspacePath, workspaceFile } from "./skill-lib/index.ts";
+import { bytesToHex } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha256";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_ROOT = resolve(__dirname, "..");
+void DEFAULT_ROOT;
+
+type Args = {
+  soul?: string;
+  memory?: string;
+  log: string;
+  reason: string;
+  dryRun: boolean;
+};
+
+function parseArgs(argv: string[]): Args {
+  const args: Args = {
+    log: workspaceFile("constitution-audit.jsonl"),
+    reason: "",
+    dryRun: false,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--soul") args.soul = argv[++i];
+    else if (a === "--memory") args.memory = argv[++i];
+    else if (a === "--log") args.log = argv[++i];
+    else if (a === "--reason") args.reason = argv[++i];
+    else if (a === "--dry-run") args.dryRun = true;
+    else if (a === "--help" || a === "-h") {
+      console.log(`Usage: npm run revoke -- [options]
+
+Required:
+  --reason <text>    Free-text reason for revocation (kept in audit log)
+
+Targets (at least one):
+  --soul    <path>   Annotate SOUL.md adoption block as revoked
+  --memory  <path>   Append revocation entry to MEMORY.md
+
+Options:
+  --log <path>       Audit log path (default <homedir>/.openclaw/workspace/constitution-audit.jsonl)
+  --dry-run          Show what would change without writing
+  -h, --help         This help
+
+The original adoption block in SOUL.md is NOT deleted — it is annotated with
+a [REVOKED ...] tag so the historical fact of adoption remains legible.
+
+To disable the companion plugin, follow the printed command (this script
+does not run it for you).`);
+      process.exit(0);
+    }
+  }
+  return args;
+}
+
+export function nowIso(): string {
+  return new Date().toISOString();
+}
+
+export function backupName(target: string, now: () => string = nowIso): string {
+  return `${target}.${now().replace(/[:.]/g, "-")}.bak`;
+}
+
+export const ADOPTION_MARKER = "Freedom Preserving Protocol";
+
+export type AnnotateResult = {
+  status: "annotated" | "skipped-no-file" | "skipped-no-marker" | "skipped-already-revoked" | "dry-run";
+  backup?: string;
+};
+
+export function annotateSoul(
+  path: string,
+  reason: string,
+  ts: string,
+  dryRun: boolean,
+): AnnotateResult {
+  if (!existsSync(path)) {
+    console.log(`[SOUL ] file not found: ${path} — skipping`);
+    return { status: "skipped-no-file" };
+  }
+  const content = readFileSync(path, "utf-8");
+  if (!content.includes(ADOPTION_MARKER)) {
+    console.log(
+      `[SOUL ] no adoption block found (marker "${ADOPTION_MARKER}" absent) — skipping`,
+    );
+    return { status: "skipped-no-marker" };
+  }
+  const tag = `\n\n> **[REVOKED ${ts}]** Reason: ${reason}\n`;
+  const annotated = content.includes(`[REVOKED `)
+    ? content
+    : insertAfterMarker(content, ADOPTION_MARKER, tag);
+
+  if (annotated === content) {
+    console.log(`[SOUL ] already annotated as revoked — skipping`);
+    return { status: "skipped-already-revoked" };
+  }
+  if (dryRun) {
+    console.log(`[SOUL ] (dry-run) would annotate adoption block with:`);
+    console.log(tag);
+    return { status: "dry-run" };
+  }
+  const bak = backupName(path);
+  copyFileSync(path, bak);
+  writeFileSync(path, annotated);
+  console.log(`[SOUL ] backup created: ${bak}`);
+  console.log(`[SOUL ] adoption block annotated as REVOKED`);
+  return { status: "annotated", backup: bak };
+}
+
+export function insertAfterMarker(content: string, marker: string, insertion: string): string {
+  const i = content.indexOf(marker);
+  if (i < 0) return content;
+  const afterHeading = content.indexOf("\n", i);
+  if (afterHeading < 0) return content + insertion;
+  return content.slice(0, afterHeading) + insertion + content.slice(afterHeading);
+}
+
+export type MemoryRevokeResult = {
+  status: "appended" | "created" | "dry-run";
+  backup?: string;
+};
+
+export function appendMemoryRevocation(
+  path: string,
+  reason: string,
+  ts: string,
+  dryRun: boolean,
+): MemoryRevokeResult {
+  const block = [
+    "",
+    "## Constitutional Adoption — REVOKED",
+    "",
+    `- Revoked: ${ts}`,
+    `- Reason: ${reason}`,
+    "- Original adoption block (above) intentionally retained for historical legibility.",
+    "- Audit log: a kind=revocation entry has been appended to constitution-audit.jsonl.",
+    "",
+  ].join("\n");
+
+  if (!existsSync(path)) {
+    if (dryRun) {
+      console.log(`[MEM  ] (dry-run) would create ${path} with revocation block`);
+      return { status: "dry-run" };
+    }
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, block.trimStart());
+    console.log(`[MEM  ] created and wrote revocation block`);
+    return { status: "created" };
+  }
+  if (dryRun) {
+    console.log(`[MEM  ] (dry-run) would append revocation block:`);
+    console.log(block);
+    return { status: "dry-run" };
+  }
+  const bak = backupName(path);
+  copyFileSync(path, bak);
+  appendFileSync(path, block);
+  console.log(`[MEM  ] backup created: ${bak}`);
+  console.log(`[MEM  ] revocation block appended`);
+  return { status: "appended", backup: bak };
+}
+
+function appendAuditRevocation(logPath: string, reason: string, dryRun: boolean) {
+  if (dryRun) {
+    console.log(
+      `[AUDIT] (dry-run) would append kind=revocation entry to ${logPath}`,
+    );
+    return;
+  }
+  try {
+    const result = appendAuditEntry({
+      log: logPath,
+      kind: "revocation",
+      notes: reason.slice(0, 280),
+      adoptionIntact: false,
+    });
+    console.log(`[AUDIT] revocation entry appended to ${result.logPath}`);
+    console.log(`        previousHash: ${result.previousHash.slice(0, 16)}...`);
+    console.log(`        thisHash:     ${result.hash.slice(0, 16)}...`);
+  } catch (e) {
+    console.error(`[AUDIT] failed to append revocation entry: ${(e as Error).message}`);
+  }
+}
+
+export type MarkerResult = { path: string; wrote: boolean };
+
+export function writeMarker(
+  logPath: string,
+  reason: string,
+  ts: string,
+  dryRun: boolean,
+): MarkerResult {
+  const markerPath = resolve(dirname(logPath), ".fpp-revoked");
+  const content = `Freedom Preserving Protocol — revoked ${ts}\nReason: ${reason}\n`;
+  if (dryRun) {
+    console.log(`[MARK ] (dry-run) would write marker to ${markerPath}`);
+    return { path: markerPath, wrote: false };
+  }
+  mkdirSync(dirname(markerPath), { recursive: true });
+  writeFileSync(markerPath, content);
+  console.log(`[MARK ] revocation marker written to ${markerPath}`);
+  return { path: markerPath, wrote: true };
+}
+
+export type RevokeOptions = {
+  soul?: string;
+  memory?: string;
+  log: string;
+  reason: string;
+  dryRun?: boolean;
+};
+
+export function revokeAdoption(opts: RevokeOptions): void {
+  const ts = nowIso();
+  const dryRun = opts.dryRun ?? false;
+  const logResolved = resolve(absolutizeWorkspacePath(opts.log));
+
+  if (existsSync(logResolved)) {
+    const chainReport = verifyAuditChain(logResolved);
+    if (!chainReport.ok) {
+      const detail = chainReport.errors.slice(0, 3).join("; ");
+      throw new Error(
+        `Audit chain integrity check failed — refusing to revoke from a potentially forged log. ${detail}`,
+      );
+    }
+  }
+
+  if (opts.soul) annotateSoul(resolve(opts.soul), opts.reason, ts, dryRun);
+  if (opts.memory)
+    appendMemoryRevocation(resolve(opts.memory), opts.reason, ts, dryRun);
+  appendAuditRevocation(logResolved, opts.reason, dryRun);
+  writeMarker(logResolved, opts.reason, ts, dryRun);
+
+  if (!dryRun) {
+    try {
+      const adoptionLog = resolve(
+        dirname(logResolved),
+        "fpp-adoption-state.jsonl",
+      );
+      const current = currentAdoptionState(adoptionLog);
+      if (current !== "none" && current !== "revoked") {
+        const constitutionPath = resolve(DEFAULT_ROOT, "constitution.json");
+        const constitutionHash = existsSync(constitutionPath)
+          ? bytesToHex(sha256(readFileSync(constitutionPath)))
+          : "0".repeat(64);
+        const history = readAdoptionHistory(adoptionLog);
+        const last = history.at(-1)?.record;
+        const notes = `${opts.reason.slice(0, 200)}; peer ads cleared — no active acceptance`;
+        if (last && last.schemaVersion === 2) {
+          appendAdoptionState(adoptionLog, {
+            agentId: "local-adopter",
+            state: "revoked",
+            constitutionHash,
+            notes,
+            recordedAt: ts,
+            harnessId: last.harnessId,
+            enforcementGrade: last.enforcementGrade,
+            overlays: last.overlays,
+          });
+        } else {
+          appendAdoptionState(adoptionLog, {
+            agentId: "local-adopter",
+            state: "revoked",
+            constitutionHash,
+            notes,
+            recordedAt: ts,
+          });
+        }
+        console.log(`[STATE] adoption-state ledger → revoked (history preserved; peer ads cleared)`);
+      }
+    } catch (err) {
+      console.warn(`[adoption-state] ${(err as Error).message}`);
+    }
+  }
+}
+
+export { appendAuditRevocation };
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (!args.reason || args.reason.trim().length === 0) {
+    console.error(
+      "Refusing to revoke without --reason. Revocation should be transparent and motivated.",
+    );
+    process.exit(2);
+  }
+  if (!args.soul && !args.memory) {
+    console.log(
+      "No --soul or --memory provided. The audit log will still receive a revocation entry. Continuing.",
+    );
+  }
+
+  console.log(`Revocation timestamp: ${nowIso()}`);
+  console.log(`Reason: ${args.reason}`);
+  if (args.dryRun) console.log("Mode: DRY RUN\n");
+  else console.log("Mode: WRITE — backups will be created.\n");
+
+  try {
+    revokeAdoption({
+      soul: args.soul,
+      memory: args.memory,
+      log: args.log,
+      reason: args.reason,
+      dryRun: args.dryRun,
+    });
+  } catch (err) {
+    console.error(`[AUDIT] ${(err as Error).message}`);
+    console.error(
+      `\nFix the audit chain first (see docs/TROUBLESHOOTING.md#5), then retry.`,
+    );
+    process.exit(1);
+  }
+
+  console.log("\nIf the companion plugin is installed, disable it with:");
+  console.log("  openclaw plugins disable openclaw-fpp-plugin");
+  console.log("  (or your equivalent for your OpenClaw version)\n");
+
+  console.log(
+    "Revocation complete. History preserved; future heartbeats should treat .fpp-revoked as authoritative.",
+  );
+}
+
+const isDirectInvocation =
+  import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}` ||
+  import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, "/")}`;
+
+if (isDirectInvocation) {
+  main();
+}

@@ -1,0 +1,108 @@
+# Capability Status
+
+This is the canonical matrix separating what the Freedom Preserving Protocol
+**currently does** from what is **designed but not built**. Every other document
+in this repository defers to this file when describing implementation status.
+If a claim elsewhere conflicts with this matrix, this matrix wins and the other
+document has a bug.
+
+Last reconciled against: skill `v1.3.8`, `@ovrsr/fpp-protocol-core` `v1.0.2`,
+`@ovrsr/fpp-enforcement-core` `v1.0.2`, `@ovrsr/fpp-trust-core` `v1.0.2`,
+`@ovrsr/openclaw-fpp-plugin` `v1.1.15`, `@ovrsr/openclaw-fpp-trust` `v1.2.10`
+(versions sourced from root / `packages/*/package.json` /
+`harness/openclaw/plugin*/package.json` files).
+Local rebuilds may exceed ClawHub install-metadata — see TROUBLESHOOTING §0d (Q7-B).
+
+## Status vocabulary
+
+| Status | Meaning | Evidence required to use it |
+|--------|---------|-----------------------------|
+| `SHIPPED` | Implemented, published, and exercisable today. | A source file or command in this repository that performs the behavior. |
+| `PARTIAL` | Implemented, but with a known gap between what the capability does and what its name suggests. The gap must be stated in the same row. | Source evidence for what works **and** an explicit statement of the gap. |
+| `PROPOSED` | Designed (typically in `docs/dev-review.md`) with no implementation. Must never be described in present tense elsewhere. | A design document reference. No code exists. |
+| `DEFERRED` | Acknowledged long-horizon work with prerequisites not yet met. Tracked in `docs/ROADMAP.md`. | A roadmap entry with prerequisites. No delivery commitment. |
+
+## Verification claim classes
+
+Documentation in this repository must use these terms instead of the generic
+word "verified":
+
+- **Signature verification** — an Ed25519 signature over `constitution.json`
+  checks out against `pubkey.ed25519.txt`. Proves the artifact is the one the
+  publisher signed. Does not prove anything about agent behavior.
+- **Configuration attestation** — an agent signs a statement about its own
+  configuration (constitution hash, audit Merkle root). Proves the agent's key
+  produced the statement; does not prove the statement is true or complete.
+- **Local audit integrity** — the hash-chained JSONL log and its Merkle root
+  prove the local log was not edited after writing. Tampering is *detectable*,
+  not *preventable*, and completeness is not proven.
+- **Enforcement coverage** — the subset of tool calls that pass through the
+  dispatcher classifier. Unknown tool names default to **approval**
+  (`unknown.unclassified`), not allow.
+- **Behavioral compliance** — whether an agent's conduct actually conforms to
+  the five laws. **No component of this repository verifies behavioral
+  compliance cryptographically.** A valid signature proves a statement was
+  signed, not that it is morally or factually correct.
+
+Governance-oriented claim-class burdens (identity, configuration, runtime,
+event, completeness, behavioral), evidence kinds, and uncertainty labels are
+specified in `docs/governance/EVIDENCE_SEMANTICS.md`. That document is
+`PROVISIONAL` specification; it does not change the matrix rows below.
+
+## Capability matrix
+
+| Capability | Status | Evidence / gap |
+|------------|--------|----------------|
+| Five laws as signed normative content | `SHIPPED` | `constitution.json`, `signature.ed25519.txt`; verify with `npm run verify` (exit 0, `Signature valid: YES`). |
+| Protocol contract library (`@ovrsr/fpp-protocol-core`) | `SHIPPED` | `packages/protocol-core/` — schemas, canonicalize, Merkle, claims, workspace profiles (`FPP_WORKSPACE`). Exact-pin dependency for plugins and cores. |
+| Enforcement library core (`@ovrsr/fpp-enforcement-core`) | `SHIPPED` | `packages/enforcement-core/` — `classifyToolCall`, `resolveDisposition`, mandate/receipt/audit helpers, `FppRuntimeAdapter`. No `openclaw` dependency. OpenClaw plugin is a thin adapter. |
+| Trust library core (`@ovrsr/fpp-trust-core`) | `SHIPPED` | `packages/trust-core/` — `createTrustStack`, trust graph, handshake, quorum, disputes, capsules. No `openclaw` dependency. OpenClaw trust plugin is a thin adapter. |
+| Harness-agnostic workspace profiles | `SHIPPED` | `packages/protocol-core/src/workspace-profile.ts`; openclaw root is absolute `<homedir>/.openclaw/workspace`; `FPP_WORKSPACE` overrides; scripts use `absolutizeWorkspacePath` for legacy relative configs. |
+| Pluggable verify-install runtime probes | `SHIPPED` | `scripts/verify-install.ts` `RuntimeProbe` + `defaultProbesForProfile`; OpenClaw plugin probe and Cursor/Claude/Codex adapter-package probes. Unknown profiles warn (no false dispatcher PASS). Warns `audit.adopted-without-log` and `plugin.version-drift` when applicable (non-fatal). |
+| Cross-harness adapters (Cursor / Claude Code / Codex) | `PARTIAL` | `harness/cursor/adapter`, `harness/claude-code/adapter`, `harness/codex/adapter` implement `FppRuntimeAdapter` via native PreToolUse-style hooks; shared `@ovrsr/fpp-tool-proxy`. Gap: graded coverage (Codex apply_patch/MCP; operator can disable hooks); not gateway-non-bypassable (Plan 12). |
+| Prompt-layer skill (five-question test, adoption ritual) | `SHIPPED` | `harness/shared/prompt/SKILL.md`, `harness/shared/prompt/hooks/pre-action-check/SKILL.md`, `harness/shared/prompt/hooks/constitution-audit/SKILL.md`. Reasoning aid only; cannot mechanically veto a tool call. `npm run adopt` appends `kind=adoption` to absolutized `constitution-audit.jsonl`. Operators can also `npm run audit:bootstrap` without the model heartbeat. |
+| Graded harness adoption claims (Plan 13) | `PARTIAL` | Protocol-core V2 adoption + disclosure; ledger grade persistence; trust-plugin capsule emission/validation refuse elevating prompt-only; verify-install graded report. Gap: peer ads still require live probe evidence; not gateway-non-bypassable. |
+| Constitution signature verification | `SHIPPED` | `scripts/verify-constitution.ts`; `npm run verify`. |
+| Local audit chain + Merkle inclusion proofs | `SHIPPED` | `scripts/audit-append.ts`, `scripts/audit-verify.ts`, `scripts/audit-proof.ts`, `scripts/merkle.ts`. Local audit integrity only — no completeness guarantee, and heartbeat entries depend on the agent's continued cooperation. |
+| Dispatcher enforcement (`before_tool_call` block / requireApproval) | `PARTIAL` | `harness/openclaw/plugin/` + `packages/enforcement-core`. Works for the classified taxonomy. Gap: heuristic classifier. **Operator-present:** unknown → approval. **Unattended:** unknown → abstain. Named allows: `internal.heartbeat` (`heartbeat_respond` / `openclawheartbeat_respond`), `internal.read` (curated set incl. `memory_search`), `gateway.inspect` (param-aware), `fpp.governance` (`/^fpp_/` + `openclawfpp_*`). Default `knownCustomTools` is empty (operator extras only → `unknown.unclassified` allow). Bare `apply_patch` → `code.patch` → approval. `exec.benign` allows without staged-ledger rows. Allowing named/extras tools ≠ behavioral compliance. |
+| Unattended disposition + standing mandates | `PARTIAL` | `packages/enforcement-core` + OpenClaw/`harness/*/adapter`. Flow: hard-floor → mandate/standing-allow → staged → quorum-mandate → **emergency (wired)** → abstain. Emergency path: steward-signed `SignedEmergencyOverrideV1` in `fpp-emergency-overrides.json`, admitted via trust tool `fpp_emergency_override_submit` (never signs); consumption sets `emergencyCriteriaMet` / distinguishable `emergency override rejected (…)` abstain reasons; `allow_minimal` debits + `EmergencyReviewLedger`. Budget/revoke live in unsigned `ledgers` (signed grant excludes `remainingActions`/`revoked`); dual-verify + auto-migrate for legacy broken stores. Gap: harness hook coverage is graded outside OpenClaw; seed constitution hash unchanged (`71bf60ad…`). |
+| OpenPGP steward / operator authorization | `PARTIAL` | `@ovrsr/fpp-steward-auth-core` + enforcement seam + trust CLI. Key-independent `fpp:steward:v1:…`, signed `StewardBootstrapV1` secure genesis (`bootstrap-template` / interactive `bootstrap-admit --expected-key-ref`) with independent host-audience anchoring and first-valid-writer init+binding under one locked atomic replacement; detached/clear-signed `OperatorAuthorizationV1`; hash-chained `fpp-steward-authorization-ledger.jsonl`; transactional `consumeIfValid` before allow. Legacy TOFU (`init` + `key-admit --accept-tofu`) remains only behind `--bootstrap-profile legacy-tofu`. `apply_patch` extraction covers structured `params.changes[]`, flat `command`/legacy V4A keys, contained absolute paths, and exact `outOfWorkspacePaths` aliases (repository unit/E2E + pack-bundle proven for `@ovrsr/fpp-enforcement-core@1.0.3` / `@ovrsr/openclaw-fpp-plugin@1.1.18`). Gap: TTY fingerprint confirmation is a software-only attention control — not secret, not MFA, and not resistant to privileged local compromise. Platform-specific FIDO2/WebAuthn, OOB second-device, and OS-auth/elevation profiles are `DEFERRED` (`docs/ROADMAP.md` §6); no WoT/keyserver; no remote ledger anti-rollback/sync; published-artifact live-gateway consumption not claimed here; coarse abstain diagnostics (candidate-reason propagation is a follow-up). Never manufactures affected-party/data-subject consent; cannot bypass hard floors. See `docs/architecture/steward-operator-authorization.md`. |
+| Peer / steward quorum mandate issuance | `SHIPPED` | `harness/openclaw/plugin-trust/src/quorum-session.ts`, `quorum-policy.ts`, tools `fpp_mandate_propose` / `fpp_mandate_second` / `fpp_mandate_finalize`, CLI `quorum-status` / `quorum-revoke-mandate`. Quorum **issues** `StandingMandateV1` (authorization `quorum-mandate`) — it does **not** call allow directly and is **not** constitutional ratification. Forbidden consent scopes rejected at finalize. Sybil floor is local eligible-ID + key-lifecycle policy only (no full ratification tallies). |
+| Steward emergency override (time-boxed) | `SHIPPED` | Protocol-core `SignedEmergencyOverrideV1` + enforcement `EmergencyOverrideStore` + trust `fpp_emergency_override_submit`. Stewards only for v1 (peers excluded by design). Local agent key always rejected (defense-in-depth). |
+| Config-drift diagnostics (unattended / quorum) | `SHIPPED` | Enforcement warns `UNATTENDED_APPROVAL_WITHOUT_STANDING_ALLOW` (config-shape only; does not probe live mandates). Trust warns `QUORUM_*_UNREACHABLE` / `QUORUM_*_THRESHOLD_EXCEEDS_ELIGIBLE` unconditionally at merge. |
+| Enforcement audit log (hash-chained, per-decision) | `PARTIAL` | `harness/openclaw/plugin/src/audit-log.ts`. Malformed tails throw `AuditCorruptionError` (no silent chain reset). Default `auditFailureBehavior=fail-closed` blocks high-risk calls when the log cannot be written (proven by security regressions). Gap: log integrity still depends on filesystem permissions; post-approval outcome gaps emit `AUDIT-GAP` diagnostics rather than rolling back the approved action. |
+| Dispatcher self-test | `PARTIAL` | `scripts/self-test.ts`; `npm run self-test`. Runs the classifier against fixtures **in-process**. Gap: it does not execute the installed plugin, does not test prompt-layer behavior, and does not write audit entries. |
+| Agent identity keys (Ed25519) | `SHIPPED` | `harness/openclaw/plugin-trust/src/identity.ts`; key seed persisted per `identityKeyPath`. |
+| Constitutional handshake + signed claims | `PARTIAL` | `harness/openclaw/plugin-trust/` + `packages/trust-core/`. Default `verificationPolicy=hardened-v2` requires signed fresh v2 claims. Offer `adoptedAt` prefers adoption-state accepted `recordedAt`, else SOUL `- Adopted: <ISO>`, else now (`resolve-adopted-at.ts`). Gap: handshake proves configuration claims, not behavior. |
+| Trust graph with propagation + persistence | `SHIPPED` | `harness/openclaw/plugin-trust/src/trust-graph.ts`, `persistence.ts`. Local, per-host state; scores are heuristic, not attestations. |
+| Strict-mode escalation (trust → enforcement coupling) | `SHIPPED` | `harness/openclaw/plugin-trust/src/strict-mode.ts` writes; `harness/openclaw/plugin/src/index.ts` reads `strictModeStatePath`. Malformed state applies conservative approval fallback (does not silently disable protection). Loose file-based coupling by design. |
+| Trust-plugin LLM tools | `SHIPPED` | Tools registered in `harness/openclaw/plugin-trust/src/index.ts` and `harness/openclaw/plugin-trust/openclaw.plugin.json` `contracts.tools`: `fpp_handshake_challenge`, `fpp_handshake_offer`, `fpp_handshake_verify`, `fpp_trust_status`, `fpp_attestation_export`, `fpp_cluster_status`, `fpp_receipt_verify`, `fpp_receipt_proof`, `fpp_capsule_offer`, `fpp_mandate_propose`, `fpp_mandate_second`, `fpp_mandate_finalize`, `fpp_emergency_override_submit`. |
+| Adoption states beyond adopted/revoked (`reviewed`, `inherited`, `forked`, `superseded`, …) | `PARTIAL` | `AdoptionStateRecordV2` + `scripts/adoption-state.ts` carry `harnessId`, `enforcementGrade`, overlays; dual-path local `accepted` vs peer-advertisable (`computePeerAdvertisability`, `AdoptionDisclosure`, capsule summary). `verify-install` reports local vs peer columns. Gap: gateway non-bypassable enforcement is Plan 12; prompt-only remains declaration-only for peers. |
+| Conformance receipts | `PARTIAL` | `harness/openclaw/plugin/src/receipt-store.ts`, `receipt-signer.ts`, `receipt-log.ts`, `after_tool_call` correlation; trust-core `verifyReceiptEvidence` emits Event-class attestation kind `instrumented-boundary-disposition` only when schema/signature and every requested expected-value check succeed, plus the versioned exact-entry bundle and expected root when inclusion is requested. **Positive ceiling (`proven_under_assumptions`):** the signer recorded disposition D and authorization A against action digest H under only the semantically valid signed metadata present; the self-presented receipt identifies an instrumented-boundary recording context. Gap: the receipt does **not** independently prove trusted boundary traversal, exact downstream parameter equality, uninstrumented/bypass absence, completeness, uncompromised runtime, or behavioral compliance (`test/conformance-receipt-e2e.test.ts`, `docs/governance/EVIDENCE_SEMANTICS.md` §4a). |
+| Trust-state capsules (signed, time-bounded, nonce-fresh) | `PARTIAL` | `harness/openclaw/plugin-trust/src/capsule.ts`, `fpp_capsule_offer`. Fresh challenge-bound capsules with evidence/receipt roots and coverage. Gap: legacy claim path still available for migration; capsules do not prove completeness. |
+| Internal vs external trust views | `SHIPPED` | `harness/openclaw/plugin-trust/src/trust-views.ts` — self / direct-peer / propagated views with explicit divergence; no global intrinsic score. |
+| Contextual scoped trust | `SHIPPED` | `trust-scope.ts`, `trust-policy.ts`, `evidence-quality.ts` — Trust(A→B, capability, context, time); local policy only. |
+| Signed trust persistence v2 | `SHIPPED` | `trust-events.ts` + `persistence.ts` — signed event ledger; v1 import as low-confidence legacy observations (`.v1.bak` preserved). |
+| Due process (challenge, appeal, correction, rehabilitation) | `SHIPPED` | `harness/openclaw/plugin-trust/src/disputes.ts` — append-only records; originals never rewritten. |
+| Key rotation / revocation | `SHIPPED` | `harness/openclaw/plugin-trust/src/key-lifecycle.ts` — signed rotation/revocation/recovery; forks cannot impersonate ancestors. |
+| Steward overrides | `SHIPPED` | CLI `steward-override` (scoped, expiring, audited); unaudited `seed` deprecated. |
+| Constitutional amendments, lineage, ratification | `PROPOSED` | `docs/dev-review.md` §10. The seed constitution keeps its immutable hash `71bf60a…`; descendants would require new hashes and explicit lineage metadata. No amendment mechanism is implemented. |
+| Signed release manifests / build provenance | `PARTIAL` | `scripts/release-manifest.ts`, `scripts/release-manifest-verify.ts`, `npm run release:verify`. Release signing domain separated from constitution/agent keys. Gap: publish automation still optional until offline custody prerequisites in `KEY_GOVERNANCE.md` are met. |
+| Gateway-level (tool-router) enforcement RFC | `PROPOSED` (draft) / `DEFERRED` (upstream) | In-repo draft: `docs/rfc/0001-voluntary-constitutional-layer.md` + `docs/rfc/SUBMISSION.md`. Draft informed by Plans 8–11. The optional `packages/gateway-reference` CI exercise covers bounded transitions, monotonic epochs, filtered durable transition-abort receipts, ledger startup/commit failures, and disable failure while a call is invoking — see `packages/gateway-reference/src/index.test.ts` and `test/conformance-receipt-e2e.test.ts`. This non-production exercise does **not** upgrade the row or establish gateway-wide coverage: upstream merge / Foundation intake remains `DEFERRED` per `docs/ROADMAP.md` §1 — not `SHIPPED`. |
+| Adoption telemetry dashboard | `DEFERRED` | `docs/ROADMAP.md`. |
+| Remote sub-agent transitive guarantees | `DEFERRED` | `docs/ROADMAP.md`. Today each host installs independently; no transitive guarantee. |
+| Zero-knowledge compliance proofs | `DEFERRED` | `docs/ROADMAP.md`. Current selective disclosure is Merkle-proof based. |
+| Post-quantum key migration | `DEFERRED` | `docs/ROADMAP.md`. Current cryptography is Ed25519. |
+
+Acceptance criteria for turning each `PROPOSED` row into `SHIPPED` are defined
+in `docs/dev-review.md`, Appendix A. Implementation plans should cite the
+relevant criterion (A.1–A.8) in their Definition of Done.
+
+## How to keep this file honest
+
+1. Any plan that implements a `PROPOSED` or `DEFERRED` row must flip the row's
+   status **in the same change** and cite the new source files.
+2. Any documentation edit that adds a present-tense capability claim must be
+   able to point to a `SHIPPED` or `PARTIAL` row here.
+3. Re-verify the version line at the top whenever any `package.json` version
+   bumps.

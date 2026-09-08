@@ -1,0 +1,66 @@
+node_modules/
+plugin/dist/
+plugin/node_modules/
+plugin-trust/dist/
+plugin-trust/node_modules/
+harness/openclaw/plugin/dist/
+harness/openclaw/plugin/node_modules/
+harness/openclaw/plugin-trust/dist/
+harness/openclaw/plugin-trust/node_modules/
+harness/*/adapter/dist/
+harness/*/adapter/node_modules/
+packages/*/dist/
+packages/*/node_modules/
+packages/*/coverage/
+
+# Runtime audit logs (per-agent; not committed)
+.openclaw/
+
+# Generated OpenClaw-only ClawHub skill root (see harness/openclaw/scripts/stage-skill.ts)
+skill-dist/
+harness/openclaw/skill-dist/
+
+# Legacy stale skill snapshot removed; do not recreate
+# package/
+
+# npm pack artifacts
+*.tgz
+
+# Coverage reports
+coverage/
+plugin/coverage/
+plugin-trust/coverage/
+harness/openclaw/plugin/coverage/
+harness/openclaw/plugin-trust/coverage/
+.nyc_output/
+plugin/.nyc_output/
+plugin-trust/.nyc_output/
+harness/openclaw/plugin/.nyc_output/
+harness/openclaw/plugin-trust/.nyc_output/
+
+# Local assurance artifacts (CI uploads these)
+assurance-artifacts/
+
+# Locally-generated maintainer signing key (never commit)
+.signing-key.ed25519.local
+
+# Praxiscode local state
+.praxiscode/
+.cursor/
+.claude/
+.agents
+CLAUDE.md
+PRAXISCODE_LEARNINGS.md
+operator_scratchpad.md
+.operator_scratchpad/
+
+# Local maintainer build/deploy runbook (may contain machine-specific notes)
+docs/runbooks/dev-build-and-deploy.md
+
+# Praxiscode-managed GitHub content (workflows are tracked)
+.github/*
+!.github/workflows/
+!.github/workflows/**
+
+# This file is used to probe the corpus for coverage metrics
+scripts/.corpus-probe.*

@@ -1,0 +1,228 @@
+{
+  "id": "openclaw-fpp-trust",
+  "name": "Freedom Preserving Protocol \u2014 Trust & Handshake",
+  "description": "Agent-to-agent trust graph with BFS propagation, constitutional handshake sequence, signed claims, Merkle audit bridging, and strict-mode signaling. Enables multi-agent verification of FPP adoption.",
+  "contracts": {
+    "tools": [
+      "fpp_handshake_challenge",
+      "fpp_handshake_offer",
+      "fpp_handshake_verify",
+      "fpp_trust_status",
+      "fpp_attestation_export",
+      "fpp_cluster_status",
+      "fpp_sensitivity_share_check",
+      "fpp_receipt_verify",
+      "fpp_receipt_proof",
+      "fpp_capsule_offer",
+      "fpp_mandate_propose",
+      "fpp_mandate_second",
+      "fpp_mandate_finalize",
+      "fpp_emergency_override_submit"
+    ]
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "constitutionHash": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$",
+        "default": "71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993",
+        "description": "SHA-256 of the constitution.json this agent has adopted. Used during handshake verification."
+      },
+      "trustAttenuationFactor": {
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "default": 0.8,
+        "description": "Per-hop trust attenuation for BFS propagation. 0.8 means 20% reduction per hop."
+      },
+      "handshakeTimeoutMs": {
+        "type": "integer",
+        "minimum": 10000,
+        "maximum": 600000,
+        "default": 300000,
+        "description": "Maximum time (ms) for a handshake session before it expires."
+      },
+      "maxPropagationDepth": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10,
+        "default": 3,
+        "description": "Maximum BFS depth for trust propagation (receiver-local policy)."
+      },
+      "propagationMinEdgeConfidence": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.2,
+        "description": "Minimum per-edge confidence required for a hop to participate in propagation."
+      },
+      "propagationEvidenceCeiling": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.45,
+        "description": "Maximum confidence for propagated (non-direct) evidence."
+      },
+      "trustGraphPath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-trust-graph.json",
+        "description": "Path to the persisted trust graph JSON file."
+      },
+      "identityKeyPath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-agent-identity.key",
+        "description": "Path to the Ed25519 identity key seed file (mode 0600). Generated on first run."
+      },
+      "auditLogPath": {
+        "type": "string",
+        "default": ".openclaw/workspace/constitution-audit.jsonl",
+        "description": "Path to the constitution audit JSONL log for Merkle root computation."
+      },
+      "fallbackAuditLogPath": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "default": ".openclaw/workspace/fpp-plugin-audit.jsonl",
+        "description": "Fallback audit JSONL when the primary auditLogPath has zero entries (default: enforcement plugin log). Set to null to disable. Handshake Merkle roots bootstrap from enforcement entries until constitution-audit has heartbeat/adoption entries."
+      },
+      "receiptLogPath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-receipts.jsonl",
+        "description": "Path to the typed conformance receipt ledger used for selective proof export and capsule receipt roots."
+      },
+      "strictModeStatePath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-strict-sessions.json",
+        "description": "Path to the strict-mode session state file read by the enforcement plugin."
+      },
+      "verificationPolicy": {
+        "type": "string",
+        "enum": [
+          "hardened-v2",
+          "v2-with-legacy-declarations",
+          "legacy-unsafe"
+        ],
+        "default": "hardened-v2",
+        "description": "Handshake verification policy. hardened-v2 (default) requires signed fresh v2 claims. v2-with-legacy-declarations allows inspecting v1 as declaration-only. legacy-unsafe is visibly weaker and accepts unsigned claims."
+      },
+      "replayCachePath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-replay-cache.json",
+        "description": "Path to the bounded challenge replay-key cache."
+      },
+      "requireSignedClaims": {
+        "type": "boolean",
+        "default": true,
+        "description": "Deprecated in favor of verificationPolicy. Derived from policy when omitted."
+      },
+      "requireMerkleProof": {
+        "type": "boolean",
+        "default": false,
+        "description": "When true, handshake verification requires a valid Merkle proof of recent audit entries."
+      },
+      "requireFreshness": {
+        "type": "boolean",
+        "default": true,
+        "description": "Deprecated in favor of verificationPolicy. Derived from policy when omitted."
+      },
+      "strictModeOnHandshakeFailure": {
+        "type": "boolean",
+        "default": false,
+        "description": "When true, a failed or UNKNOWN handshake triggers strict mode for that session."
+      },
+      "strictModeTtlMs": {
+        "type": "integer",
+        "minimum": 60000,
+        "maximum": 86400000,
+        "default": 3600000,
+        "description": "How long strict mode lasts (ms) before auto-expiring."
+      },
+      "strictModeAddApprovalOn": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": [
+          "fs.write.workspace",
+          "fs.delete.workspace",
+          "http.public-read",
+          "http.public-write",
+          "exec.outbound-write",
+          "message.external"
+        ],
+        "description": "Risk classifications that become require-approval during strict mode."
+      },
+      "acknowledgeDangerousOverrides": {
+        "type": "boolean",
+        "default": false,
+        "description": "Required to enable verificationPolicy=legacy-unsafe. Without this flag, legacy-unsafe fails closed to hardened-v2 and emits a migration diagnostic — the config file is never rewritten."
+      },
+      "quorumPeerThreshold": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 64,
+        "default": 2,
+        "description": "Minimum aye ballots required to finalize a peer-quorum mandate. Local policy only — not constitutional ratification."
+      },
+      "quorumStewardThreshold": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 64,
+        "default": 2,
+        "description": "Minimum aye ballots required to finalize a steward-quorum mandate. Steward-role keys only (Law 2)."
+      },
+      "quorumPeerEligibleIds": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "default": [],
+        "description": "Agent IDs eligible to cast peer-quorum ballots."
+      },
+      "quorumStewardEligibleIds": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "default": [],
+        "description": "Agent IDs with steward role eligible for steward-quorum (and peer-quorum) ballots."
+      },
+      "quorumMinStandingLevel": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4,
+        "description": "Optional minimum TrustLevel ordinal (0=UNKNOWN … 4=MAXIMUM) required to cast a ballot. Omit for no standing floor."
+      },
+      "quorumProposalTtlMs": {
+        "type": "integer",
+        "minimum": 60000,
+        "maximum": 86400000,
+        "default": 3600000,
+        "description": "How long an open quorum proposal remains open before expiry (ms)."
+      },
+      "mandateStorePath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-mandates.json",
+        "description": "Shared path for StandingMandateV1 records issued by quorum finalize (consumed by the enforcement plugin)."
+      },
+      "stewardAuthorizationLedgerPath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-steward-authorization-ledger.jsonl",
+        "description": "Hash-chained OpenPGP steward authorization ledger (human CLI admit only; never agent-signed)."
+      },
+      "stewardInstanceAudience": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": ".*\\S.*",
+        "description": "Stable deployment identifier independently trusted by secure steward bootstrap. Required unless --audience is supplied explicitly; not a secret or presence factor."
+      },
+      "quorumStatePath": {
+        "type": "string",
+        "default": ".openclaw/workspace/fpp-quorum-sessions.json",
+        "description": "Path for open quorum proposal/ballot session state."
+      }
+    }
+  }
+}
