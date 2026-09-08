@@ -18,17 +18,17 @@ The result is a prompt-layer constitutional skill plus an optional, isolated Nod
 - Linux
 - Node.js `v22.23.1` (repository requires `>=22.19`)
 - npm `10.9.8`
-- Repository clone at `/home/krp/fpp-test/repo`
+- An isolated repository clone, kept out of Hermes production configuration
 - Constitution hash:
   `71bf60ad917c5413cc17b0f65e83c7a29218e24a2740725a819058ed9c6b1993`
 
 ## 1. Clone into a test directory
 
 ```bash
-mkdir -p /home/krp/fpp-test
+mkdir -p ~/fpp-test
 git clone https://github.com/ovrsr/freedom-preserving-protocol.git \
-  /home/krp/fpp-test/repo
-cd /home/krp/fpp-test/repo
+  ~/fpp-test/repo
+cd ~/fpp-test/repo
 ```
 
 Keep this clone isolated from Hermes production configuration. Never copy the repository's `harness/openclaw/plugin/`, `harness/openclaw/plugin-trust/`, OpenClaw manifests, or test fixtures into a live Hermes runtime as executable plugins.
@@ -57,7 +57,7 @@ Install only the canonical prompt-layer `SKILL.md` from `harness/shared/prompt/`
 
 ```bash
 mkdir -p ~/.hermes/skills/freedom-preserving-protocol
-cp /home/krp/fpp-test/repo/harness/shared/prompt/SKILL.md \
+cp harness/shared/prompt/SKILL.md \
   ~/.hermes/skills/freedom-preserving-protocol/SKILL.md
 chmod 700 ~/.hermes/skills/freedom-preserving-protocol
 chmod 600 ~/.hermes/skills/freedom-preserving-protocol/SKILL.md
@@ -72,7 +72,7 @@ If the skill is later updated, verify the constitution and review the diff befor
 The repository's harness-agnostic cores can be tested without installing the enforcement plugin:
 
 ```bash
-cd /home/krp/fpp-test/repo
+cd ~/fpp-test/repo
 npm run build -w @ovrsr/fpp-protocol-core
 npm run typecheck -w @ovrsr/fpp-trust-core
 npm run test -w @ovrsr/fpp-protocol-core
@@ -134,7 +134,7 @@ rm -rf ~/.hermes/skills/freedom-preserving-protocol
 The test clone can be removed independently:
 
 ```bash
-rm -rf /home/krp/fpp-test
+rm -rf ~/fpp-test
 ```
 
 Before rollback, preserve any review notes or receipts that explain the change.
