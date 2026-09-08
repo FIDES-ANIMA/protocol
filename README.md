@@ -2,11 +2,15 @@
 
 A modular constitutional framework for self-governing AI agents.
 
+**Current line** (local `package.json`): skill `1.3.9`, `@ovrsr/openclaw-fpp-plugin` `1.1.18`, `@ovrsr/openclaw-fpp-trust` `1.2.12`, `@ovrsr/fpp-protocol-core` `1.0.2`, `@ovrsr/fpp-enforcement-core` `1.0.3`, `@ovrsr/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
+
 | Layer | Artifact | What it does |
 |-------|----------|--------------|
 | Prompt | `freedom-preserving-protocol` (ClawHub, OpenClaw-only stage) | The agent reads SKILL.md, reasons about the five laws, and elects to adopt — including running a five-question test mentally before tool calls. |
-| Dispatcher | `@ovrsr/openclaw-fpp-plugin` (ClawHub) | OpenClaw enforcement: `before_tool_call` hook that can `block` or `requireApproval`. |
-| Dispatcher | `@ovrsr/fpp-adapter-{cursor,claude-code,codex}` (GitHub only) | Graded PreToolUse-style hooks for Cursor / Claude Code / Codex (see `harness/<harness>/adapter/`). |
+| Library cores | `@ovrsr/fpp-{protocol,enforcement,trust,steward-auth}-core` (git / bundled; **not** on npm) | Harness-agnostic schemas, classifier, disposition, mandates, receipts, trust stack. Plugins and adapters embed exact pins via `bundledDependencies`. |
+| Dispatcher | `@ovrsr/openclaw-fpp-plugin` (ClawHub) | OpenClaw enforcement: `before_tool_call` hook that can `block`, `requireApproval`, or abstain. Requires Gateway `>=2026.3.28`. |
+| Dispatcher | `@ovrsr/fpp-adapter-{cursor,claude-code,codex}` (GitHub only, `private`) | Graded PreToolUse-style hooks for Cursor / Claude Code / Codex. See `harness/<harness>/`. |
+| Shared proxy | `@ovrsr/fpp-tool-proxy` | MCP/sidecar interception when native hooks are missing or incomplete. |
 | Dispatcher | `@ovrsr/openclaw-fpp-trust` (ClawHub) | Trust: agent-to-agent trust graph, handshake, capsules — signature/config attestation, not behavioral compliance. Does **not** gate tool calls. |
 
 All layers compose but each is independently adoptable. The skill teaches *why* to comply; adapters/plugins gate a classified subset of tool calls and emit signed **conformance receipts**; the trust plugin exchanges fresh **trust-state capsules**.
@@ -27,31 +31,58 @@ Valid signed receipts support an Event-class attestation named **`instrumented-b
 
 ## Install
 
-### Skill only (prompt-layer)
+Runtime pin: Node `>=22.19` (`.node-version`). Compatibility matrix: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md). Per-harness indexes: [`harness/README.md`](harness/README.md). Machine-readable guarantees: [`harness/shared/harness-capabilities.json`](harness/shared/harness-capabilities.json).
+
+### OpenClaw (first-class)
+
+ClawHub remains the primary distribution. Plugins refuse to load on Gateway builds older than `2026.3.28` (known-vulnerable window through `2026.3.25`). Upgrade the gateway, or install only the prompt-layer skill.
 
 ```bash
 openclaw skills install freedom-preserving-protocol
-```
-
-On Claude Code, Cursor, and Codex, install the matching adapter under `harness/<harness>/adapter/` and wire hooks (graded guarantees — not OpenClaw plugin parity). See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) and [`harness/`](harness/).
-
-### Enforcement plugin (dispatcher-layer)
-
-```bash
 openclaw plugins install clawhub:ovrsr/openclaw-fpp-plugin
+openclaw plugins install clawhub:ovrsr/openclaw-fpp-trust   # optional
 ```
 
 Plugin tarballs embed unpublished `@ovrsr/fpp-*-core` packages via `bundledDependencies` (cores are not on npm). If install fails resolving those packages, upgrade to a bundled release — see `docs/TROUBLESHOOTING.md`.
 
-### Trust plugin (dispatcher-layer, optional)
+Inspect enforcement:
 
 ```bash
-openclaw plugins install clawhub:ovrsr/openclaw-fpp-trust
+openclaw plugins inspect openclaw-fpp-plugin --runtime --json
+# Expected: status: "active", hooks include "before_tool_call"
+#           compat.pluginApi: ">=2026.3.28"
 ```
+
+### Cursor / Claude Code / Codex (graded)
+
+Adapters are **not** in the ClawHub skill and are **not** published to npm (`private: true`). Clone this repository (or `npm pack` after `bundle:deps` / `prepack`) and follow the harness runbook. Do not merge hook fragments from a ClawHub skill install — there are none there.
+
+| Harness | Prompt skill | Hooks | Runbook | Verify |
+|---------|--------------|-------|---------|--------|
+| Cursor | `.cursor/skills/` or `~/.cursor/skills/` | `cp harness/cursor/adapter/hooks/hooks.json .cursor/hooks.json` (or `~/.cursor/hooks.json`) | [`harness/cursor/runbook.md`](harness/cursor/runbook.md) | `npm run verify-install -- --profile cursor --json` |
+| Claude Code | `.claude/skills/` or `~/.claude/skills/` | Merge [`harness/claude-code/adapter/hooks/settings.fragment.json`](harness/claude-code/adapter/hooks/settings.fragment.json) into `.claude/settings.json` | [`harness/claude-code/runbook.md`](harness/claude-code/runbook.md) | `npm run verify-install -- --profile claude-code --json` |
+| Codex | AgentSkills / Codex skill docs (`trigger:` support is partial) | `cp harness/codex/adapter/hooks/hooks.json ~/.codex/hooks.json` | [`harness/codex/runbook.md`](harness/codex/runbook.md) | `npm run verify-install -- --profile codex --json` |
+
+Sample hook commands point at `npx tsx harness/<harness>/adapter/src/hook-cli.ts` — adjust the path to your checkout. Default workspaces are `~/.fpp/<profile>` (override with `FPP_WORKSPACE`). Optional `FPP_ENFORCEMENT_CONFIG` must stay inside that workspace root.
+
+**Graded guarantees (not OpenClaw plugin parity):**
+
+- **Works:** native PreToolUse-style hooks drive enforcement-core dispositions (including unattended abstain/mandate paths) and receipts under the profile workspace.
+- **Does not claim:** gateway-non-bypassable binding, complete tool coverage on Codex (shell/Bash is the reliable path; `apply_patch` / some MCP tools have historically had gaps), or trust-plugin UI outside OpenClaw.
+- **Operator authority:** hooks can be disabled (Law 2). Claude Code `--dangerously-skip-permissions` bypasses hooks. Codex has no FPP approval UI (`require_approval` → deny).
+- **Fallback:** `@ovrsr/fpp-tool-proxy` for MCP/sidecar gateways when hooks are unavailable or incomplete.
+
+### Hermes (prompt-layer only)
+
+No dispatcher plugin. Do not install OpenClaw plugins into Hermes. See [`harness/hermes/runbook.md`](harness/hermes/runbook.md).
+
+### Library consumers (Node, no harness)
+
+Import `@ovrsr/fpp-enforcement-core` / `@ovrsr/fpp-trust-core` from a workspace clone. Cores are not on the public npm registry; published plugins embed them. Caller must wire `createEnforcementRuntime` / an adapter for mechanical gating.
 
 ### Adopt safely
 
-After installing the skill, from its install directory:
+After installing the skill, from its install directory. **Always run `npm install` first** — ClawHub skill trees often ship without `node_modules`, and `verify` needs `@noble/ed25519` + `@noble/hashes`.
 
 ```bash
 npm install
@@ -65,6 +96,8 @@ npm run verify-install -- \
 ```
 
 Idempotent. Backs up before writing. Never overwrites.
+
+`verify-install` takes `--profile openclaw` (default), `cursor`, `claude-code`, `codex`, or `generic`. Unknown profiles warn and do **not** false-PASS dispatcher. OpenClaw workspace paths resolve under `<homedir>/.openclaw/workspace`; other profiles use `~/.fpp/<profile>` or `$FPP_WORKSPACE`.
 
 ### Self-test
 
@@ -96,26 +129,36 @@ freedom-preserving-protocol/
 ├── package.json                   Monorepo workspaces
 ├── constitution.json              Canonical signed laws (hash: 71bf60a...)
 ├── constitution.yaml              Human-readable
-├── signature.ed25519.txt           Detached signature
-├── pubkey.ed25519.txt              Publisher's public key
+├── signature.ed25519.txt          Detached signature
+├── pubkey.ed25519.txt             Publisher's public key
 ├── harness/
+│   ├── README.md                  Harness index + graded-guarantee note
 │   ├── shared/prompt/             Canonical SKILL.md, hooks/, adoption/
 │   ├── shared/harness-capabilities.json
 │   ├── openclaw/plugin/           @ovrsr/openclaw-fpp-plugin
 │   ├── openclaw/plugin-trust/     @ovrsr/openclaw-fpp-trust
 │   ├── openclaw/skill/            ClawHub skill metadata + ALLOWLIST
-│   ├── cursor/adapter/            @ovrsr/fpp-adapter-cursor
-│   ├── claude-code/adapter/       @ovrsr/fpp-adapter-claude-code
-│   ├── codex/adapter/             @ovrsr/fpp-adapter-codex
-│   └── hermes/runbook.md          Prompt-layer Hermes integration
-├── packages/                      Harness-agnostic cores
+│   ├── openclaw/scripts/          stage-skill, skill-self-check, clawhub-publish
+│   ├── cursor/                    adapter + runbook (@ovrsr/fpp-adapter-cursor)
+│   ├── claude-code/               adapter + runbook
+│   ├── codex/                     adapter + runbook
+│   └── hermes/                    Prompt-layer runbook (no dispatcher plugin)
+├── packages/
+│   ├── protocol-core/             @ovrsr/fpp-protocol-core
+│   ├── enforcement-core/          @ovrsr/fpp-enforcement-core
+│   ├── trust-core/                @ovrsr/fpp-trust-core
+│   ├── steward-auth-core/         @ovrsr/fpp-steward-auth-core
+│   ├── tool-proxy/                @ovrsr/fpp-tool-proxy
+│   └── gateway-reference/         CI-only stub; not a production gateway
 ├── scripts/                       Shared verify/adopt/audit tooling
 ├── test/                          Cross-harness e2e tests
 └── docs/
     ├── CAPABILITY_STATUS.md
     ├── COMPATIBILITY.md
     ├── TROUBLESHOOTING.md
-    └── REVOCATION.md
+    ├── REVOCATION.md
+    ├── ROADMAP.md
+    └── RELEASE_ASSURANCE.md
 ```
 
 ## Verification
@@ -152,7 +195,7 @@ Docs:
 
 ### Continuous integration
 
-Pull requests and pushes to `main`/`master` run `.github/workflows/ci.yml` on Node `22.19`: constitution verification, classifier self-test, both plugin typecheck/test suites, and a package dry-run (`scripts/verify-pack.sh`) with no registry side effects.
+Pull requests and pushes to `main`/`master` run `.github/workflows/ci.yml` on Node `22.19`: workspace-link assert, library-core build, `npm run verify:all`, e2e, security regressions, coverage floors, classifier corpus, and package assurance artifacts (no registry side effects).
 
 Locally, the canonical full gate is:
 
@@ -160,7 +203,7 @@ Locally, the canonical full gate is:
 npm run verify:all
 ```
 
-That runs constitution verification, classifier fixtures, both plugin typechecks and tests, and package dry-run checks. Runtime pin: `.node-version` (`22.19`); root and both plugins require Node `>=22.19`.
+That runs constitution verification, classifier fixtures, core build, typecheck (cores + adapters + plugins), `npm run test:all` (workspace tests, scripts, interop, corpus, e2e, self-test), and package dry-run (`scripts/verify-pack.sh`). Runtime pin: `.node-version` (`22.19`); root and both plugins require Node `>=22.19`. OpenClaw plugins require Gateway `>=2026.3.28`.
 
 Coverage: `npm run test:coverage` enforces floor thresholds in `harness/openclaw/plugin/.c8rc.json` and `harness/openclaw/plugin-trust/.c8rc.json` (measured from the 2026-07-10 baseline; trust branch/function floors re-measured 2026-07-19 after core extraction). Compatibility re-export shims that only forward `@ovrsr/fpp-*-core` are excluded — their logic is covered in the core packages. Raise thresholds only after new tests lift the measured floor — never lower them to hide regressions.
 
@@ -186,16 +229,17 @@ Safety properties of `scripts/sign-constitution.ts`:
 - **Refuses to mint in CI.** If `CI`, `GITHUB_ACTIONS`, `GITLAB_CI`, `BUILDKITE`, `CIRCLECI`, `TRAVIS`, `JENKINS_URL`, `TEAMCITY_VERSION`, `TF_BUILD`, `BITBUCKET_BUILD_NUMBER`, or `CODEBUILD_BUILD_ID` is set, key generation is hard-disabled — provide `FPP_SIGNING_KEY` out-of-band instead.
 - **Refuses to mint when stdout is not a TTY.** Catches the `npm run sign | tee build.log` / `script(1)` capture case.
 
-Note: the published constitution hash `71bf60a...` is stable across the entire v1.x line. Tooling releases (v1.1.x added the companion plugin; v1.2.x added Merkle proofs, the trust plugin, and trust graph persistence; v1.3.x is the current skill line) bump versions independently — none of them modify the constitution itself.
+Note: the published constitution hash `71bf60a...` is stable across the entire v1.x line. Tooling releases bump independently and do not modify the constitution itself — v1.1.x added the companion plugin; v1.2.x added Merkle proofs, the trust plugin, and trust graph persistence; v1.3.x is the current skill line (`1.3.9` locally).
 
 ## Honest Caveats
 
 - **The skill is prompt-layer.** A hostile skill, a jailbreak, or a user editing SOUL.md can override the skill-level adoption. Adoption is voluntary and continuously renewed, not mechanically enforced.
-- **The plugin is dispatcher-layer but not unforgeable.** It survives prompt injection of the agent. It does not survive a malicious operator with shell access, a compromised OpenClaw runtime, or a user who manually disables the plugin. This last property is by design — Law 2 requires the user retain ultimate authority.
-- **Enforcement coverage is partial.** The classifier is a heuristic taxonomy; **tool calls it does not recognize default to allow**. It gates the known-risky subset, not everything.
+- **The plugin is dispatcher-layer but not unforgeable.** It survives prompt injection of the agent. It does not survive a malicious operator with shell access, a compromised OpenClaw runtime, or a user who manually disables the plugin. This last property is by design — Law 2 requires the user retain ultimate authority. Graded adapters have the same operator-disable property (plus harness-specific bypasses such as `--dangerously-skip-permissions`).
+- **Enforcement coverage is partial.** The classifier is a heuristic taxonomy. **Unrecognized tool calls do not default to allow:** operator-present mode sends them to **approval** (`unknown.unclassified`); unattended mode **abstains**. Named allow-classes (`internal.heartbeat`, `internal.read`, `gateway.inspect`, `fpp.governance`) and `exec.benign` are explicit exceptions, not a catch-all. It gates the known-risky subset, not everything, and allowing a named tool is not behavioral compliance.
+- **Cross-harness adapters are graded.** Cursor and Claude Code can deny when hooks are installed and trusted. Codex coverage is shell-first. None of them are gateway-non-bypassable. Trust-plugin tools remain OpenClaw-only.
 - **Trust-plugin verification is signature + configuration attestation, not behavioral proof.** A successful handshake proves a peer's key signed a claim about its configuration (and, under hardened-v2, answered a fresh challenge). It does not prove the peer behaves constitutionally. Outputs name `identityVerified` / `configurationClaimVerified` / `freshnessVerified` / `standing`; deprecated `fppVerified` is standing-derived only.
 - **No sentence in this repository should be read as cryptographic proof of moral or behavioral compliance.** See the claim classes in [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
-- **Gateway-level enforcement is the longer play.** For non-bypassable enforcement at the foundation layer, a Gateway RFC for constitutional gating at the tool-router boundary is needed. AOS Phase 2 is already targeting this; this package positions itself as a candidate reference implementation when it ships. This and other long-horizon items are tracked with prerequisites in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+- **Gateway-level enforcement is the longer play.** For non-bypassable enforcement at the foundation layer, a Gateway RFC for constitutional gating at the tool-router boundary is needed. An in-repo draft lives at [`docs/rfc/0001-voluntary-constitutional-layer.md`](docs/rfc/0001-voluntary-constitutional-layer.md); upstream intake remains open. `packages/gateway-reference` is a **CI-only stub**, not a live gateway. This and other long-horizon items are tracked with prerequisites in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - **Model-dependent.** Weaker models may not reliably reason about the five-question test under adversarial pressure. The dispatcher plugin partially compensates by enforcing a deterministic check on a known-risky tool taxonomy.
 
 ## Precedents
@@ -211,4 +255,5 @@ This repository is licensed under the Humanitarian Use License v1.0 (see [LICENS
 
 - **Skill bundle on ClawHub** — distributed under MIT-0 per ClawHub policy. Anyone may use, modify, and redistribute the published skill without attribution.
 - **Plugins (`@ovrsr/openclaw-fpp-plugin`, `@ovrsr/openclaw-fpp-trust`)** — distributed under the Humanitarian Use License v1.0. See `harness/openclaw/plugin/LICENSE` and `harness/openclaw/plugin-trust/LICENSE`.
+- **Library cores and git-only adapters** — Humanitarian Use License v1.0 in this repo; cores are not published to npm.
 - **GitHub repo** — Humanitarian Use License v1.0 governs clones and forks.
