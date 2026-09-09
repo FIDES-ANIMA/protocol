@@ -57,7 +57,7 @@ The OpenClaw plugins use the OpenClaw Plugin SDK and remain the richest dispatch
 | OpenClaw Gateway | `>=2026.3.28` | `harness/openclaw/plugin/package.json` → `openclaw.compat.minGatewayVersion` (same in `harness/openclaw/plugin-trust/package.json`) |
 | Plugin API (`openclaw/plugin-sdk`) | `>=2026.3.28` | `harness/openclaw/plugin/package.json` → `openclaw.compat.pluginApi` |
 | Node.js (both plugins) | `>=22.19` | `harness/openclaw/plugin/package.json` and `harness/openclaw/plugin-trust/package.json` → `engines.node` |
-| Node.js (skill scripts + `verify:all`) | `>=22.19` | root `package.json` → `engines.node`; `.node-version` |
+| Node.js (repository install + `verify:all`) | `>=24.16.0 <25` or `>=26.1.0` | root `package.json` → `engines.node`; `.node-version` pins CI to `24.16.0` |
 | Package manager | `npm` or `pnpm`; `pnpm` required for in-repo bundled builds | repo build convention |
 
 The plugin's `package.json` declares:

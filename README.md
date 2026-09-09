@@ -31,7 +31,7 @@ Valid signed receipts support an Event-class attestation named **`instrumented-b
 
 ## Install
 
-Runtime pin: Node `>=22.19` (`.node-version`). Compatibility matrix: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md). Per-harness indexes: [`harness/README.md`](harness/README.md). Machine-readable guarantees: [`harness/shared/harness-capabilities.json`](harness/shared/harness-capabilities.json).
+Repository development pin: Node `24.16.0` (`.node-version`); Node `>=26.1.0` is also supported. Compatibility matrix: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md). Per-harness indexes: [`harness/README.md`](harness/README.md). Machine-readable guarantees: [`harness/shared/harness-capabilities.json`](harness/shared/harness-capabilities.json).
 
 ### OpenClaw (first-class)
 
@@ -204,7 +204,7 @@ Docs:
 
 ### Continuous integration
 
-Pull requests and pushes to `main`/`master` run `.github/workflows/ci.yml` on Node `22.19`: workspace-link assert, library-core build, `npm run verify:all`, e2e, security regressions, coverage floors, classifier corpus, and package assurance artifacts (no registry side effects).
+Pull requests and pushes to `main`/`master` run `.github/workflows/ci.yml` on Node `24.16.0`: workspace-link assert, library-core build, `npm run verify:all`, e2e, security regressions, coverage floors, classifier corpus, and package assurance artifacts (no registry side effects).
 
 Locally, the canonical full gate is:
 
@@ -212,7 +212,7 @@ Locally, the canonical full gate is:
 npm run verify:all
 ```
 
-That runs constitution verification, classifier fixtures, core build, typecheck (cores + adapters + plugins), `npm run test:all` (workspace tests, scripts, interop, corpus, e2e, self-test), and package dry-run (`scripts/verify-pack.sh`). Runtime pin: `.node-version` (`22.19`); root and both plugins require Node `>=22.19`. OpenClaw plugins require Gateway `>=2026.3.28`.
+That runs constitution verification, classifier fixtures, core build, typecheck (cores + adapters + plugins), `npm run test:all` (workspace tests, scripts, interop, corpus, e2e, self-test), and package dry-run (`scripts/verify-pack.sh`). The repository workspace requires Node `>=24.16.0 <25 || >=26.1.0`; the published plugins retain Node `>=22.19` runtime compatibility. OpenClaw plugins require Gateway `>=2026.3.28`.
 
 Coverage: `npm run test:coverage` enforces floor thresholds in `harness/openclaw/plugin/.c8rc.json` and `harness/openclaw/plugin-trust/.c8rc.json` (measured from the 2026-07-10 baseline; trust branch/function floors re-measured 2026-07-19 after core extraction). Compatibility re-export shims that only forward `@fides-anima/fpp-*-core` are excluded — their logic is covered in the core packages. Raise thresholds only after new tests lift the measured floor — never lower them to hide regressions.
 

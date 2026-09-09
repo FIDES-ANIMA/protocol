@@ -52,7 +52,7 @@ The staging host is authenticated as an organization owner, and all ten target n
 
 ## Clean install and verification
 
-Run from the repository root with Node `>=22.19`:
+Run from the repository root with Node `>=24.16.0 <25` or `>=26.1.0` (`.node-version` pins `24.16.0`):
 
 ```bash
 npm ci
