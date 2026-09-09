@@ -6,7 +6,7 @@
  */
 
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import type { OpenClawPluginApi, OpenClawPluginDefinition } from "openclaw/plugin-sdk/plugin-entry";
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 
 import {
   createEnforcementRuntime,
@@ -303,7 +303,7 @@ export function registerEnforcement(api: {
   return config;
 }
 
-const plugin: OpenClawPluginDefinition = definePluginEntry({
+const plugin = definePluginEntry({
   id: "openclaw-fpp-plugin",
   name: "Freedom Preserving Protocol — Enforcement",
   description:
