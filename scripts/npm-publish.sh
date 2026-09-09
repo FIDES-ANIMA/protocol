@@ -51,11 +51,13 @@ Guarded live npm publisher for @fides-anima packages.
 Usage:
   npm run publish:npm -- --preflight-only
   FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live
+  FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live --resume
   FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live --package <name>
 
 Options:
   --preflight-only  Run all checks without publishing.
   --confirm-live    Authorize the live npm publish phase.
+  --resume          Continue a partial release after integrity verification.
   --package <name>  Publish or preflight one package for partial-run recovery.
   --help            Show this help.
 
@@ -69,6 +71,7 @@ USAGE
 mode=""
 selected_name=""
 package_selected="false"
+resume="false"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --preflight-only)
@@ -85,6 +88,9 @@ while [[ $# -gt 0 ]]; do
       selected_name="$2"
       package_selected="true"
       shift
+      ;;
+    --resume)
+      resume="true"
       ;;
     --help|-h)
       usage
@@ -104,6 +110,10 @@ done
 if [[ "$mode" == "live" && "${FPP_NPM_PUBLISH:-}" != "YES" ]]; then
   die "Live publish requires FPP_NPM_PUBLISH=YES"
 fi
+[[ "$resume" != "true" || "$mode" == "live" ]] \
+  || die "--resume is valid only with --confirm-live"
+[[ "$resume" != "true" || "$package_selected" != "true" ]] \
+  || die "--resume and --package cannot be combined"
 
 load_npm_token() {
   if [[ -z "${NPM_TOKEN:-}" ]]; then
@@ -197,15 +207,38 @@ registry_exact_version() {
 
 verify_published_version() {
   local package_name="$1" version="$2"
-  for _ in 1 2 3 4 5; do
+  for attempt in $(seq 1 30); do
     if registry_exact_version "$package_name" "$version"; then
       [[ "$registry_observed" == "$version" ]] \
         || die "Registry returned unexpected version for ${package_name}: ${registry_observed}"
       return 0
     fi
-    sleep 2
+    [[ "$attempt" -eq 30 ]] || sleep 5
   done
   die "Published version did not become visible: ${package_name}@${version}"
+}
+
+verify_existing_artifact() {
+  local package_name="$1" version="$2" pack_json local_integrity remote_integrity
+  pack_json="$(
+    public_npm pack --dry-run --json --ignore-scripts -w "$package_name"
+  )" || die "Unable to calculate local integrity for ${package_name}@${version}"
+  local_integrity="$(
+    printf '%s' "$pack_json" | node -e "
+      const fs = require('fs');
+      const packs = JSON.parse(fs.readFileSync(0, 'utf8'));
+      const integrity = packs[0]?.integrity;
+      if (typeof integrity !== 'string' || !integrity) process.exit(2);
+      process.stdout.write(integrity);
+    "
+  )" || die "Local pack did not report integrity for ${package_name}@${version}"
+  remote_integrity="$(
+    public_npm view "${package_name}@${version}" dist.integrity \
+      --registry "$REGISTRY"
+  )" || die "Unable to read registry integrity for ${package_name}@${version}"
+  [[ "$local_integrity" == "$remote_integrity" ]] \
+    || die "Published artifact differs from local package: ${package_name}@${version}"
+  printf 'RESUME: verified existing artifact %s@%s\n' "$package_name" "$version"
 }
 
 require_internal_dependencies_published() {
@@ -244,6 +277,7 @@ printf '%s\n' "$org_access" \
 names=()
 versions=()
 dirs=()
+pending=()
 selected_found="false"
 for i in "${!package_dirs[@]}"; do
   package_dir="${package_dirs[$i]}"
@@ -273,7 +307,13 @@ for i in "${!package_dirs[@]}"; do
   if registry_exact_version "$name" "$version"; then
     [[ "$registry_observed" == "$version" ]] \
       || die "Registry returned unexpected version for ${name}: ${registry_observed}"
-    die "${name}@${version} already exists; bump it before publishing"
+    if [[ "$resume" == "true" ]]; then
+      pending+=("false")
+    else
+      die "${name}@${version} already exists; bump it or use --resume after a partial release"
+    fi
+  else
+    pending+=("true")
   fi
 done
 [[ "$selected_found" == "true" ]] \
@@ -286,6 +326,12 @@ public_npm run verify:all
 public_npm run publish:npm:dry
 require_clean_tree
 
+for i in "${!names[@]}"; do
+  if [[ "${pending[$i]}" == "false" ]]; then
+    verify_existing_artifact "${names[$i]}" "${versions[$i]}"
+  fi
+done
+
 if [[ "$package_selected" == "true" ]]; then
   require_internal_dependencies_published "${dirs[0]}"
 fi
@@ -297,12 +343,14 @@ fi
 
 # Close the registry race between the initial preflight and the live phase.
 for i in "${!names[@]}"; do
+  [[ "${pending[$i]}" == "true" ]] || continue
   if registry_exact_version "${names[$i]}" "${versions[$i]}"; then
     die "${names[$i]}@${versions[$i]} appeared during preflight; refusing publish"
   fi
 done
 
 for i in "${!names[@]}"; do
+  [[ "${pending[$i]}" == "true" ]] || continue
   name="${names[$i]}"
   version="${versions[$i]}"
   require_internal_dependencies_published "${dirs[$i]}"

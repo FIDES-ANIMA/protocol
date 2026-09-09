@@ -133,15 +133,16 @@ FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live
 ```
 
 If a registry or network failure interrupts a partial release, inspect the npm
-registry first. Publish each remaining package individually, preserving the
-dependency order above:
+registry first, then resume:
 
 ```bash
-FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live \
-  --package @fides-anima/fpp-enforcement-core
+FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live --resume
 ```
 
-Single-package recovery never skips an existing version; it publishes only the
-named absent version after rerunning every verification gate. Never use
-`--force`; bump any version already present. The script verifies each package
-on npm before continuing. It does not publish or modify ClawHub packages.
+Resume skips an existing version only after its registry integrity exactly
+matches a fresh local dry-pack. It then publishes missing versions in dependency
+order. For deliberate one-package recovery, use `--package <name>` instead;
+that mode never skips an existing version. Never use `--force`; bump any
+conflicting version. The script allows up to 150 seconds for a newly uploaded
+version to become publicly visible before stopping. It does not publish or
+modify ClawHub packages.

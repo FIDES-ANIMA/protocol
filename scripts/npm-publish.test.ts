@@ -94,13 +94,30 @@ if [[ "$1" == "view" ]]; then
   name="\${spec%@*}"
   version="\${spec##*@}"
   if grep -Fqx "$name" "$PUBLISHED_STATE"; then
-    echo "$version"
+    if [[ "\${3:-}" == "dist.integrity" ]]; then
+      if [[ "$SCENARIO" == "integrity-mismatch" ]]; then
+        echo "sha512-different-\${name}"
+      else
+        echo "sha512-test-\${name}"
+      fi
+    else
+      echo "$version"
+    fi
     exit 0
   fi
   echo "npm error code E404" >&2
   exit 1
 fi
 if [[ "$1" == "ci" || "$1" == "run" ]]; then exit 0; fi
+if [[ "$1" == "pack" ]]; then
+  name=""
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "-w" ]]; then name="$2"; break; fi
+    shift
+  done
+  printf '[{"integrity":"sha512-test-%s"}]\\n' "$name"
+  exit 0
+fi
 if [[ "$1" == "publish" ]]; then
   name=""
   while [[ $# -gt 0 ]]; do
@@ -245,6 +262,41 @@ describe("guarded live npm publisher", () => {
     );
     assert.equal(publishCalls.length, 1);
     assert.match(publishCalls[0]!, new RegExp(` -w ${target}$`));
+  });
+
+  it("resumes only after matching existing artifact integrity", () => {
+    const alreadyPublished = "@fides-anima/fpp-protocol-core";
+    const result = runWithFakeCommands(
+      ["--confirm-live", "--resume"],
+      "normal",
+      "YES",
+      [alreadyPublished],
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.output, /RESUME: verified existing artifact/);
+    const publishCalls = result.calls.filter((call) =>
+      call.startsWith("npm publish "),
+    );
+    assert.equal(publishCalls.length, expectedOrder.length - 1);
+    assert.equal(
+      publishCalls.some((call) => call.endsWith(`-w ${alreadyPublished}`)),
+      false,
+    );
+  });
+
+  it("refuses resume when an existing artifact differs", () => {
+    const result = runWithFakeCommands(
+      ["--confirm-live", "--resume"],
+      "integrity-mismatch",
+      "YES",
+      ["@fides-anima/fpp-protocol-core"],
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.output, /Published artifact differs/);
+    assert.equal(
+      result.calls.some((call) => call.startsWith("npm publish ")),
+      false,
+    );
   });
 
   it("refuses one-package recovery with unpublished internal dependencies", () => {
