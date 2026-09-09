@@ -68,7 +68,9 @@ async function main(): Promise<void> {
   const runtime = createCursorRuntime(loadConfig());
 
   if (after) {
-    const toolCallId = event.tool_call_id ?? `cursor-after-${Date.now()}`;
+    // Never fabricate an id here: the pre-hook receipt (persisted in
+    // fpp-receipts-pending.json) is keyed by the host's tool_call_id.
+    const toolCallId = event.tool_call_id;
     await runtime.onAfterToolCall(
       {
         toolName: event.tool_name,

@@ -20,6 +20,7 @@ import {
 import {
   EmergencyOverrideStore,
   type AdmitResult,
+  type StewardKeyBindings,
 } from "@fides-anima/fpp-enforcement-core";
 import type { AgentIdentity } from "@fides-anima/fpp-trust-core";
 import { signClaim } from "@fides-anima/fpp-trust-core";
@@ -1121,7 +1122,28 @@ export type EmergencyOverrideSubmitDependencies = {
   stewardEligibleIds: string[];
   /** Absolute or workspace-relative path to fpp-emergency-overrides.json. */
   emergencyOverrideStorePath: string;
+  /**
+   * Independent issuer→signing-key binding. Self-certifying
+   * `fpp:ed25519:<fingerprint>` steward IDs bind themselves; any other ID must
+   * be resolvable here (normally from the trust graph) or admission fails with
+   * `issuer-key-unbound`.
+   */
+  stewardKeyBindings?: StewardKeyBindings | undefined;
 };
+
+/**
+ * Build issuer→key bindings from the trust graph: a steward's key is the one
+ * bound to its canonical node. Unknown / key-less nodes yield no binding.
+ */
+export function stewardKeyBindingsFromTrustGraph(
+  trustGraph: Pick<TrustGraphProtocol, "getAgent">,
+): StewardKeyBindings {
+  return (issuerId: string) => {
+    const node = trustGraph.getAgent(issuerId);
+    if (!node) return undefined;
+    return node.publicKeyHex ? [node.publicKeyHex] : [];
+  };
+}
 
 export const EmergencyOverrideSubmitParams = Type.Object({
   /** Already-signed override as a JSON string (preferred agent path). */
@@ -1171,6 +1193,8 @@ export function executeEmergencyOverrideSubmit(
   const admitted: AdmitResult = store.admit(parsed.override, {
     stewardEligibleIds: deps.stewardEligibleIds,
     localPublicKeyHex: deps.identity.publicKeyHex,
+    // No bindings supplied → only self-certifying steward IDs can be admitted.
+    stewardKeyBindings: deps.stewardKeyBindings ?? {},
   });
 
   if (!admitted.ok) {

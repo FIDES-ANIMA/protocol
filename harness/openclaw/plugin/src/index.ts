@@ -10,6 +10,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 
 import {
   createEnforcementRuntime,
+  createWorkspaceTrashRecovery,
   legacyDecisionFromDisposition,
   resolveDisposition,
   isReversibleClassification,
@@ -37,6 +38,8 @@ function openClawAdapter(): FppRuntimeAdapter {
     getWorkspacePaths() {
       return { workspaceRoot: resolveWorkspaceRoot({ profile: "openclaw" }) };
     },
+    // Destructive staged-allow needs a concrete recovery artifact (audit F05).
+    recoveryProvider: createWorkspaceTrashRecovery(),
     // requestApproval is intentionally unused by core; OpenClaw surfaces
     // require_approval via the hook return value in operator-present mode.
   };

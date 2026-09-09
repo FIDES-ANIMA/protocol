@@ -1,6 +1,9 @@
 /**
  * File-backed ledger for staged-allow undo/review obligations.
- * Host rollback is not guaranteed — this records the obligation + audit trail.
+ *
+ * For destructive classes the record carries the adapter-proven recovery
+ * artifact (`recovery`) that makes the action actually undoable; the runtime
+ * refuses to stage destructive actions without one.
  */
 
 import {
@@ -10,6 +13,8 @@ import {
   readFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import type { RecoveryProof } from "./recovery.js";
+import { withFileLock } from "./file-lock.js";
 
 export type StagedActionStatus = "open" | "undone" | "expired_without_undo";
 
@@ -21,6 +26,8 @@ export type StagedActionRecord = {
   registeredAt: string;
   undoExpiresAt: string;
   status: StagedActionStatus;
+  /** Present when a concrete recovery artifact backs this staged action. */
+  recovery?: RecoveryProof | undefined;
 };
 
 export type RegisterStagedInput = {
@@ -29,6 +36,7 @@ export type RegisterStagedInput = {
   actionDigest: string;
   undoWindowMs: number;
   nowMs: number;
+  recovery?: RecoveryProof | undefined;
 };
 
 export class StagedActionLedger {
@@ -68,28 +76,31 @@ export class StagedActionLedger {
       registeredAt: new Date(input.nowMs).toISOString(),
       undoExpiresAt: new Date(input.nowMs + input.undoWindowMs).toISOString(),
       status: "open",
+      ...(input.recovery ? { recovery: input.recovery } : {}),
     };
-    this.append(record);
+    withFileLock(this.path, () => this.append(record));
     return record;
   }
 
   /** Mark open windows past undoExpiresAt as expired_without_undo (auditable). */
   sweepExpired(nowMs: number): StagedActionRecord[] {
-    const current = this.readLatest();
-    const expired: StagedActionRecord[] = [];
-    for (const record of current) {
-      if (
-        record.status === "open" &&
-        Date.parse(record.undoExpiresAt) < nowMs
-      ) {
-        const next: StagedActionRecord = {
-          ...record,
-          status: "expired_without_undo",
-        };
-        expired.push(next);
-        this.append(next);
+    return withFileLock(this.path, () => {
+      const current = this.readLatest();
+      const expired: StagedActionRecord[] = [];
+      for (const record of current) {
+        if (
+          record.status === "open" &&
+          Date.parse(record.undoExpiresAt) < nowMs
+        ) {
+          const next: StagedActionRecord = {
+            ...record,
+            status: "expired_without_undo",
+          };
+          expired.push(next);
+          this.append(next);
+        }
       }
-    }
-    return expired;
+      return expired;
+    });
   }
 }

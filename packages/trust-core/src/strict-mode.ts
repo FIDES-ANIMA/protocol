@@ -32,8 +32,10 @@ export const STRICT_MODE_SCHEMA_VERSION = 1 as const;
 export const VALID_STRICT_CLASSIFICATIONS = [
   "fs.delete.protected",
   "fs.delete.workspace",
+  "fs.delete.external",
   "fs.write.protected",
   "fs.write.workspace",
+  "fs.write.external",
   "fs.read.benign",
   "exec.cred-exfil",
   "exec.outbound-write",
@@ -42,6 +44,7 @@ export const VALID_STRICT_CLASSIFICATIONS = [
   "pkg.install",
   "pkg.publish",
   "http.public-write",
+  "http.private-write",
   "http.public-read",
   "http.read",
   "gateway.restart",

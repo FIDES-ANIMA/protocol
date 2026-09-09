@@ -6,6 +6,7 @@ import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
 import {
   canonicalizeV2,
+  deriveAgentIdV2,
   emergencyOverrideSigningFields,
   signMessage,
   verifyEmergencyOverrideSignature,
@@ -44,6 +45,13 @@ describe("EmergencyOverrideStore", () => {
   );
   const nowMs = Date.parse("2026-07-15T12:00:00.000Z");
   const stewardEligibleIds = ["steward:alice"];
+  // Opaque steward IDs need an independent issuer→key binding (audit F01).
+  const stewardKeyBindings = { "steward:alice": stewardPublicKey };
+  const admitOpts = {
+    stewardEligibleIds,
+    localPublicKeyHex: agentPublicKey,
+    stewardKeyBindings,
+  };
 
   const baseOverride = {
     schemaVersion: 1 as const,
@@ -60,10 +68,7 @@ describe("EmergencyOverrideStore", () => {
     const storePath = join(ws.path, "emergency-valid.json");
     const store = new EmergencyOverrideStore(storePath);
     const override = signOverride(baseOverride, stewardSeed);
-    const admitted = store.admit(override, {
-      stewardEligibleIds,
-      localPublicKeyHex: agentPublicKey,
-    });
+    const admitted = store.admit(override, admitOpts);
     assert.equal(admitted.ok, true);
     const coverage = store.findCoverage("pkg.install", {
       nowMs,
@@ -81,10 +86,7 @@ describe("EmergencyOverrideStore", () => {
     const store = new EmergencyOverrideStore(storePath);
     const override = signOverride(baseOverride, stewardSeed);
     assert.equal(
-      store.admit(override, {
-        stewardEligibleIds,
-        localPublicKeyHex: agentPublicKey,
-      }).ok,
+      store.admit(override, admitOpts).ok,
       true,
     );
     const coverage = store.findCoverage("pkg.install", {
@@ -102,10 +104,7 @@ describe("EmergencyOverrideStore", () => {
     const store = new EmergencyOverrideStore(storePath);
     const override = signOverride(baseOverride, stewardSeed);
     assert.equal(
-      store.admit(override, {
-        stewardEligibleIds,
-        localPublicKeyHex: agentPublicKey,
-      }).ok,
+      store.admit(override, admitOpts).ok,
       true,
     );
     const coverage = store.findCoverage("net.fetch", {
@@ -123,10 +122,7 @@ describe("EmergencyOverrideStore", () => {
     const store = new EmergencyOverrideStore(storePath);
     const override = signOverride(baseOverride, stewardSeed);
     override.signature = "00".repeat(64);
-    const admitted = store.admit(override, {
-      stewardEligibleIds,
-      localPublicKeyHex: agentPublicKey,
-    });
+    const admitted = store.admit(override, admitOpts);
     assert.equal(admitted.ok, false);
     if (!admitted.ok) {
       assert.equal(admitted.reason, "signature-invalid");
@@ -145,10 +141,7 @@ describe("EmergencyOverrideStore", () => {
       stewardSeed,
     );
     assert.equal(
-      store.admit(override, {
-        stewardEligibleIds,
-        localPublicKeyHex: agentPublicKey,
-      }).ok,
+      store.admit(override, admitOpts).ok,
       true,
     );
     const coverage = store.findCoverage("pkg.install", {
@@ -175,10 +168,11 @@ describe("EmergencyOverrideStore", () => {
       },
       agentSeed,
     );
-    // Even with agent key mistakenly on the steward allowlist:
+    // Even with agent key mistakenly on the steward allowlist AND bound:
     const admitted = store.admit(override, {
       stewardEligibleIds: ["steward:alice", "agent:local"],
       localPublicKeyHex: agentPublicKey,
+      stewardKeyBindings: { "steward:alice": [stewardPublicKey, agentPublicKey] },
     });
     assert.equal(admitted.ok, false);
     if (!admitted.ok) {
@@ -199,10 +193,7 @@ describe("EmergencyOverrideStore", () => {
       stewardSeed,
     );
     assert.equal(
-      store.admit(override, {
-        stewardEligibleIds,
-        localPublicKeyHex: agentPublicKey,
-      }).ok,
+      store.admit(override, admitOpts).ok,
       true,
     );
     assert.equal(store.debit("e-debit"), true);
@@ -229,10 +220,7 @@ describe("EmergencyOverrideStore", () => {
       { ...baseOverride, overrideId: "e-peer", issuerId: "peer:bob" },
       stewardSeed,
     );
-    const admitted = store.admit(override, {
-      stewardEligibleIds,
-      localPublicKeyHex: agentPublicKey,
-    });
+    const admitted = store.admit(override, admitOpts);
     assert.equal(admitted.ok, false);
     if (!admitted.ok) {
       assert.equal(admitted.reason, "issuer-not-steward");
@@ -260,10 +248,7 @@ describe("EmergencyOverrideStore", () => {
       stewardSeed,
     );
     assert.equal(
-      store.admit(override, {
-        stewardEligibleIds,
-        localPublicKeyHex: agentPublicKey,
-      }).ok,
+      store.admit(override, admitOpts).ok,
       true,
     );
     assert.equal(store.revoke("e-revoked"), true);
@@ -275,6 +260,132 @@ describe("EmergencyOverrideStore", () => {
     if (!coverage.ok) {
       assert.equal(coverage.reason, "revoked");
     }
+  });
+
+  // F01: allowlisting an ID never implicitly trusts an arbitrary key.
+  it("rejects allowlisted issuer signed by an unbound key", () => {
+    const storePath = join(ws.path, "emergency-unbound.json");
+    const store = new EmergencyOverrideStore(storePath);
+    const rogueSeed = ed.utils.randomPrivateKey();
+    const override = signOverride(
+      { ...baseOverride, overrideId: "e-unbound" },
+      rogueSeed,
+    );
+    const admitted = store.admit(override, admitOpts);
+    assert.equal(admitted.ok, false);
+    if (!admitted.ok) assert.equal(admitted.reason, "issuer-key-unbound");
+
+    // No bindings at all → opaque IDs can never be admitted.
+    const noBindings = store.admit(signOverride(baseOverride, stewardSeed), {
+      stewardEligibleIds,
+      localPublicKeyHex: agentPublicKey,
+      stewardKeyBindings: {},
+    });
+    assert.equal(noBindings.ok, false);
+    if (!noBindings.ok) assert.equal(noBindings.reason, "issuer-key-unbound");
+  });
+
+  it("accepts self-certifying steward IDs and re-checks binding at coverage", () => {
+    const storePath = join(ws.path, "emergency-selfcert.json");
+    const store = new EmergencyOverrideStore(storePath);
+    const selfId = deriveAgentIdV2(stewardPublicKey);
+    const override = signOverride(
+      { ...baseOverride, overrideId: "e-selfcert", issuerId: selfId },
+      stewardSeed,
+    );
+    const admitted = store.admit(override, {
+      stewardEligibleIds: [selfId],
+      localPublicKeyHex: agentPublicKey,
+      stewardKeyBindings: {},
+    });
+    assert.equal(admitted.ok, true, JSON.stringify(admitted));
+
+    // Steward key later revoked via an explicit empty binding: consumption stops.
+    const revokedKey = store.findCoverage("pkg.install", {
+      nowMs,
+      localPublicKeyHex: agentPublicKey,
+      stewardKeyBindings: { [selfId]: [] },
+    });
+    assert.equal(revokedKey.ok, false);
+    if (!revokedKey.ok) assert.equal(revokedKey.reason, "issuer-key-unbound");
+  });
+
+  // F03: budgets derive from the signed ceiling, never the unsigned remainder.
+  it("clamps imported remainingActions to signed maxActions", () => {
+    const storePath = join(ws.path, "emergency-clamp.json");
+    const store = new EmergencyOverrideStore(storePath);
+    const override = signOverride(
+      {
+        ...baseOverride,
+        overrideId: "e-clamp",
+        budgets: { maxActions: 2, remainingActions: 999 },
+      },
+      stewardSeed,
+    );
+    assert.equal(store.admit(override, admitOpts).ok, true);
+    assert.equal(store.getRemaining("e-clamp"), 2);
+    assert.equal(store.debit("e-clamp"), true);
+    assert.equal(store.debit("e-clamp"), true);
+    assert.equal(store.debit("e-clamp"), false);
+  });
+
+  it("rejects overrides without a finite signed maxActions", () => {
+    const storePath = join(ws.path, "emergency-nomax.json");
+    const store = new EmergencyOverrideStore(storePath);
+    const override = signOverride(
+      {
+        ...baseOverride,
+        overrideId: "e-nomax",
+        budgets: { remainingActions: 5 } as never,
+      },
+      stewardSeed,
+    );
+    const admitted = store.admit(override, admitOpts);
+    assert.equal(admitted.ok, false);
+    if (!admitted.ok) assert.equal(admitted.reason, "budget-invalid");
+  });
+
+  // F04: re-admission is idempotent and never resets counters or tombstones.
+  it("re-admitting an override neither reseeds budget nor clears revocation", () => {
+    const storePath = join(ws.path, "emergency-replay.json");
+    const store = new EmergencyOverrideStore(storePath);
+    const override = signOverride(
+      { ...baseOverride, overrideId: "e-replay" },
+      stewardSeed,
+    );
+    const first = store.admit(override, admitOpts);
+    assert.equal(first.ok, true);
+    if (first.ok) assert.equal(first.idempotent, false);
+    assert.equal(store.debit("e-replay"), true);
+    assert.equal(store.getRemaining("e-replay"), 2);
+
+    const replay = store.admit(override, admitOpts);
+    assert.equal(replay.ok, true);
+    if (replay.ok) assert.equal(replay.idempotent, true);
+    assert.equal(store.getRemaining("e-replay"), 2, "budget must not reseed");
+
+    assert.equal(store.revoke("e-replay"), true);
+    const afterRevoke = store.admit(override, admitOpts);
+    assert.equal(afterRevoke.ok, false);
+    if (!afterRevoke.ok) assert.equal(afterRevoke.reason, "revoked");
+    const coverage = store.findCoverage("pkg.install", {
+      nowMs,
+      localPublicKeyHex: agentPublicKey,
+    });
+    assert.equal(coverage.ok, false);
+
+    // Same ID, different signed content → conflict, not silent replacement.
+    const conflicting = signOverride(
+      {
+        ...baseOverride,
+        overrideId: "e-replay",
+        budgets: { maxActions: 50, remainingActions: 50 },
+      },
+      stewardSeed,
+    );
+    const conflict = store.admit(conflicting, admitOpts);
+    assert.equal(conflict.ok, false);
+    if (!conflict.ok) assert.equal(conflict.reason, "id-conflict");
   });
 
   // Stewards-only: peer escalation without steward involvement is a larger

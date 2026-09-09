@@ -47,9 +47,15 @@ import {
   ReceiptLogCorruptionError,
 } from "./receipt-log.js";
 import { buildRuntimeManifest, type PackageBuildInput } from "./runtime-manifest.js";
-import { isReversibleClassification } from "./reversibility.js";
+import {
+  isReversibleClassification,
+  requiresRecoveryProof,
+} from "./reversibility.js";
 import { StagedActionLedger } from "./staged-actions.js";
 import { EmergencyReviewLedger } from "./emergency-review.js";
+import type { RecoveryProof, RecoveryProvider } from "./recovery.js";
+import { createWorkspaceContainmentResolver } from "./workspace-containment.js";
+import type { StewardKeyBindings } from "./emergency-override-store.js";
 import {
   consumeStewardOperatorCoverage,
   isOperatorMandateId,
@@ -129,6 +135,12 @@ export type FppRuntimeAdapter = {
     | ((request: FppApprovalRequest) => Promise<FppApprovalDecision>)
     | undefined;
   registerTools?: ((tools: unknown[]) => void) | undefined;
+  /**
+   * Adapter-proven recovery for destructive staged actions. Without a
+   * provider (or when it returns null) destructive classes are treated as
+   * irreversible and fall back to approval / abstain.
+   */
+  recoveryProvider?: RecoveryProvider | undefined;
 };
 
 export type EnforcementRuntimeOptions = {
@@ -139,6 +151,8 @@ export type EnforcementRuntimeOptions = {
   approvalDescription?:
     | ((c: ClassificationResult, toolName: string) => string)
     | undefined;
+  /** Optional issuer→key binding re-checked when consuming emergency overrides. */
+  stewardKeyBindings?: StewardKeyBindings | undefined;
 };
 
 export type TransitionReceiptPersistenceRecord = {
@@ -300,6 +314,7 @@ export function createEnforcementRuntime(
       receiptStore = new ReceiptStore({
         maxPending: config.receiptMaxPending,
         pendingTtlMs: config.receiptPendingTtlMs,
+        persistPath: config.receiptPendingStorePath ?? undefined,
       });
     }
     return receiptStore;
@@ -576,9 +591,40 @@ export function createEnforcementRuntime(
   ): Promise<FppBeforeToolCallResult> {
     sweepStagedActions(Date.now());
     const store = getReceiptStore();
-    const classification = classifyToolCall(event.toolName, event.params ?? {}, {
+    const workspaceRoot = adapter.getWorkspacePaths().workspaceRoot;
+    const params = event.params ?? {};
+    const classification = classifyToolCall(event.toolName, params, {
       knownCustomTools: config.knownCustomTools,
+      containment: createWorkspaceContainmentResolver({
+        workspaceRoot,
+        outOfWorkspacePaths: config.outOfWorkspacePaths,
+      }),
     });
+
+    // Durable action identity is fixed *before* any authorization decision so
+    // budget consumption, staged-undo and emergency-review obligations are
+    // always attributable even when the host omits `toolCallId`.
+    const hostToolCallId = ctx.toolCallId ?? event.toolCallId;
+    const nowIso = new Date().toISOString();
+    const paramsDigest = digestActionParams(params);
+    const actionId =
+      hostToolCallId && hostToolCallId.length > 0
+        ? hostToolCallId
+        : `fpp-action:${digest({
+            version: 2,
+            domain: DIGEST_DOMAINS.receipt,
+            value: {
+              kind: "internal-action-id",
+              toolName: event.toolName,
+              paramsDigest,
+              classification: classification.classification,
+              agentId: ctx.agentId ?? null,
+              runId: ctx.runId ?? event.runId ?? null,
+              sessionKey: ctx.sessionKey ?? null,
+              proposedAt: nowIso,
+            },
+          }).slice(0, 32)}`;
+
     const strictOverrides = config.respectTrustStrictMode
       ? getStrictApprovalOverrides(config.strictModeStatePath, ctx.sessionKey)
       : [];
@@ -587,7 +633,6 @@ export function createEnforcementRuntime(
       nowMs: Date.now(),
     });
 
-    const workspaceRoot = adapter.getWorkspacePaths().workspaceRoot;
     let stewardEvidence: StewardCoverageEvidence | null = null;
     let stewardAction: ReturnType<typeof lookupStewardOperatorCoverage> | null =
       null;
@@ -607,6 +652,7 @@ export function createEnforcementRuntime(
         {
           nowMs: Date.now(),
           localPublicKeyHex,
+          stewardKeyBindings: options.stewardKeyBindings,
         },
       );
       if (emergencyCoverage.ok) {
@@ -617,20 +663,28 @@ export function createEnforcementRuntime(
       }
     }
 
+    // Reversibility is provisional until a recovery artifact exists for
+    // destructive classes (see below); metadata-only staging is not enough.
+    let reversible = isReversibleClassification(classification.classification);
+    const resolveWith = (
+      mandate: typeof liveMandate,
+    ): DispositionResult =>
+      resolveDisposition({
+        classification,
+        config,
+        liveMandate: mandate,
+        budgetAvailable: true,
+        reversible,
+        quorumMandatePresent: mandate?.authorization === "quorum-mandate",
+        emergencyCriteriaMet,
+        emergencyOverrideRejected,
+        strictOverrides,
+      });
+
     // Resolve ordinary disposition first. Steward grants are consulted only when
     // the baseline would block or require approval — not when an allow-capable
     // path already permits execution (required-only consumption).
-    let dispositionResult = resolveDisposition({
-      classification,
-      config,
-      liveMandate,
-      budgetAvailable: true,
-      reversible: isReversibleClassification(classification.classification),
-      quorumMandatePresent: liveMandate?.authorization === "quorum-mandate",
-      emergencyCriteriaMet,
-      emergencyOverrideRejected,
-      strictOverrides,
-    });
+    let dispositionResult = resolveWith(liveMandate);
 
     if (
       legacyDecisionFromDisposition(dispositionResult.disposition) !== "allow"
@@ -646,17 +700,42 @@ export function createEnforcementRuntime(
       if (!liveMandate && stewardAction.liveMandate) {
         liveMandate = stewardAction.liveMandate;
         stewardEvidence = stewardAction.evidence;
-        dispositionResult = resolveDisposition({
-          classification,
-          config,
-          liveMandate,
-          budgetAvailable: true,
-          reversible: isReversibleClassification(classification.classification),
-          quorumMandatePresent: liveMandate?.authorization === "quorum-mandate",
-          emergencyCriteriaMet,
-          emergencyOverrideRejected,
-          strictOverrides,
-        });
+        dispositionResult = resolveWith(liveMandate);
+      }
+    }
+
+    // Destructive staged-allow requires adapter-proven recovery. When the
+    // adapter cannot produce a bounded artifact, the action is irreversible
+    // for disposition purposes and falls back to approval / abstain.
+    let recoveryProof: RecoveryProof | undefined;
+    if (
+      dispositionResult.disposition === "allow_staged" &&
+      requiresRecoveryProof(classification.classification)
+    ) {
+      let proof: RecoveryProof | null = null;
+      if (adapter.recoveryProvider) {
+        try {
+          proof = await adapter.recoveryProvider({
+            actionId,
+            toolName: event.toolName,
+            params,
+            classification: classification.classification,
+            workspaceRoot,
+            maxBytes: config.stagedRecoveryMaxBytes,
+            outOfWorkspacePaths: config.outOfWorkspacePaths,
+          });
+        } catch (err) {
+          emitAuditGap(
+            `recovery provider failed for ${actionId}: ${(err as Error).message}`,
+          );
+          proof = null;
+        }
+      }
+      if (proof) {
+        recoveryProof = proof;
+      } else {
+        reversible = false;
+        dispositionResult = resolveWith(liveMandate);
       }
     }
 
@@ -680,17 +759,7 @@ export function createEnforcementRuntime(
           nowMs: Date.now(),
         });
         stewardEvidence = null;
-        dispositionResult = resolveDisposition({
-          classification,
-          config,
-          liveMandate,
-          budgetAvailable: true,
-          reversible: isReversibleClassification(classification.classification),
-          quorumMandatePresent: liveMandate?.authorization === "quorum-mandate",
-          emergencyCriteriaMet,
-          emergencyOverrideRejected,
-          strictOverrides,
-        });
+        dispositionResult = resolveWith(liveMandate);
       } else {
         stewardEvidence = {
           stewardId: consumed.stewardId,
@@ -719,7 +788,7 @@ export function createEnforcementRuntime(
       agentId: ctx.agentId,
       runId: ctx.runId ?? event.runId,
       sessionKey: ctx.sessionKey,
-      toolCallId: ctx.toolCallId ?? event.toolCallId,
+      toolCallId: actionId,
       classification: classification.classification,
       decision,
       reason: dispositionResult.reason || classification.reason,
@@ -734,11 +803,11 @@ export function createEnforcementRuntime(
         : {}),
     };
 
-    const toolCallId = ctx.toolCallId ?? event.toolCallId;
+    const toolCallId = hostToolCallId;
     const proposeResult = store.propose({
       toolCallId,
       toolName: event.toolName,
-      paramsDigest: digestActionParams(event.params ?? {}),
+      paramsDigest,
       classification: classification.classification,
       decision,
       disposition: dispositionResult.disposition,
@@ -750,14 +819,14 @@ export function createEnforcementRuntime(
       agentId: ctx.agentId,
       runId: ctx.runId ?? event.runId,
       sessionKey: ctx.sessionKey,
-      nowIso: new Date().toISOString(),
+      nowIso,
       governanceEpoch: ctx.governanceEpoch,
       governanceMode: ctx.governanceMode,
     });
     const receipt: PendingReceiptRecord = proposeResult.record;
     if (receipt.correlationConfidence === "reduced") {
       emitAuditGap(
-        `tool call missing toolCallId; receipt ${receipt.receiptId} recorded with reduced correlation confidence`,
+        `tool call missing toolCallId; receipt ${receipt.receiptId} recorded with reduced correlation confidence (internal action ${actionId})`,
       );
     }
     for (const orphan of store.drainOrphans()) {
@@ -846,6 +915,50 @@ export function createEnforcementRuntime(
       };
     }
 
+    // Ledger obligations are recorded before the "allowed" audit entry so a
+    // fail-closed block below is never preceded by an allow in the chain.
+    if (dispositionResult.disposition === "allow_staged") {
+      try {
+        getStagedLedger().register({
+          toolCallId: actionId,
+          classification: classification.classification,
+          actionDigest: receipt.actionDigest,
+          undoWindowMs: config.stagedUndoWindowMs,
+          nowMs: Date.now(),
+          recovery: recoveryProof,
+        });
+      } catch (err) {
+        // The undo obligation is what makes staging acceptable; without the
+        // ledger entry the action is unattended and irreversible in practice.
+        return {
+          action: "block",
+          blockReason: `staged-action ledger write failed (fail-closed): ${(err as Error).message}`,
+        };
+      }
+    }
+    if (dispositionResult.disposition === "allow_minimal") {
+      // Consumption + mandatory review are one transaction keyed by the
+      // durable action id: neither may silently skip when the host omitted
+      // `toolCallId`, and a failure in either blocks the call.
+      try {
+        if (emergencyOverrideId) {
+          getEmergencyOverrideStore().debit(emergencyOverrideId);
+        }
+        getEmergencyLedger().requireReview({
+          toolCallId: actionId,
+          classification: classification.classification,
+          actionDigest: receipt.actionDigest,
+          reason: dispositionResult.reason,
+          nowIso: new Date().toISOString(),
+        });
+      } catch (err) {
+        return {
+          action: "block",
+          blockReason: `emergency accounting failed (fail-closed): ${(err as Error).message}`,
+        };
+      }
+    }
+
     const allowedAppend = tryAppend(
       config.auditLogPath,
       eventForAudit,
@@ -854,28 +967,6 @@ export function createEnforcementRuntime(
     if (!allowedAppend.ok) {
       const failure = handleAuditFailure(decision, allowedAppend.error);
       if (failure) return failure;
-    }
-
-    if (dispositionResult.disposition === "allow_staged" && toolCallId) {
-      getStagedLedger().register({
-        toolCallId,
-        classification: classification.classification,
-        actionDigest: receipt.actionDigest,
-        undoWindowMs: config.stagedUndoWindowMs,
-        nowMs: Date.now(),
-      });
-    }
-    if (dispositionResult.disposition === "allow_minimal" && toolCallId) {
-      if (emergencyOverrideId) {
-        getEmergencyOverrideStore().debit(emergencyOverrideId);
-      }
-      getEmergencyLedger().requireReview({
-        toolCallId,
-        classification: classification.classification,
-        actionDigest: receipt.actionDigest,
-        reason: dispositionResult.reason,
-        nowIso: new Date().toISOString(),
-      });
     }
 
     return { action: "allow", disposition: dispositionResult };

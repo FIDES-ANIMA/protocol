@@ -16,13 +16,19 @@
  *     to relax this, but the default should err on Law 1.
  *   - This file is dependency-free so it can be imported from both the
  *     plugin runtime and the self-test script in the parent skill package.
+ *     Filesystem containment is injected via `ClassifyOptions.containment`
+ *     (see workspace-containment.ts) rather than probed here.
  */
+
+import type { ContainmentResolver, ContainmentVerdict } from "./workspace-containment.js";
 
 export type ClassificationId =
   | "fs.delete.protected"
   | "fs.delete.workspace"
+  | "fs.delete.external"
   | "fs.write.protected"
   | "fs.write.workspace"
+  | "fs.write.external"
   | "fs.read.benign"
   | "exec.cred-exfil"
   | "exec.outbound-write"
@@ -31,6 +37,7 @@ export type ClassificationId =
   | "pkg.install"
   | "pkg.publish"
   | "http.public-write"
+  | "http.private-write"
   | "http.public-read"
   | "http.read"
   | "gateway.restart"
@@ -48,8 +55,10 @@ export type ClassificationId =
 export const CLASSIFICATION_IDS: readonly ClassificationId[] = [
   "fs.delete.protected",
   "fs.delete.workspace",
+  "fs.delete.external",
   "fs.write.protected",
   "fs.write.workspace",
+  "fs.write.external",
   "fs.read.benign",
   "exec.cred-exfil",
   "exec.outbound-write",
@@ -58,6 +67,7 @@ export const CLASSIFICATION_IDS: readonly ClassificationId[] = [
   "pkg.install",
   "pkg.publish",
   "http.public-write",
+  "http.private-write",
   "http.public-read",
   "http.read",
   "gateway.restart",
@@ -85,6 +95,13 @@ export type ClassificationResult = {
 export type ClassifyOptions = {
   /** Explicit operator allowlist of known custom tool names. */
   knownCustomTools?: string[] | undefined;
+  /**
+   * Adapter-provided workspace containment check. When supplied, writes and
+   * deletes whose real target is outside the workspace (or cannot be
+   * resolved) are classified `fs.*.external` instead of `fs.*.workspace`.
+   * Without it the classifier falls back to path heuristics only.
+   */
+  containment?: ContainmentResolver | undefined;
 };
 
 const PROTECTED_PATH_PATTERNS: RegExp[] = [
@@ -176,7 +193,13 @@ const SYSTEM_MODIFY_PATTERNS: RegExp[] = [
   /\bmkfs/,
 ];
 
-const PUBLIC_HOST_PATTERN = /^https?:\/\/(?!(localhost|127\.|192\.168\.|10\.|169\.254\.|::1)).*/i;
+/**
+ * Private / loopback / link-local destinations. Evaluated against the fully
+ * parsed hostname (never a URL prefix) so `localhost.evil.com`,
+ * `10.evil.com`, or `user@localhost@evil.com` cannot masquerade as private.
+ */
+const PRIVATE_HOST_MARKER = "private-destination" as const;
+const PUBLIC_HOST_MARKER = "public-destination" as const;
 
 function matchAny(text: string, patterns: RegExp[]): string[] {
   const matched: string[] = [];
@@ -184,43 +207,74 @@ function matchAny(text: string, patterns: RegExp[]): string[] {
   return matched;
 }
 
+/** Normalize Windows separators so `\.ssh\id_rsa` hits the same rules as `/.ssh/id_rsa`. */
+function normalizePathForMatching(raw: string): string {
+  return raw.replace(/\\/g, "/");
+}
+
 function extractPathArgs(command: string): string[] {
   const tokens = command.split(/\s+/);
   return tokens.filter((t) =>
     !t.startsWith("-") &&
     t !== tokens[0] &&
-    (t.includes("/") || t.startsWith("~") || t.startsWith(".")),
+    (t.includes("/") || t.includes("\\") || t.startsWith("~") || t.startsWith(".") || /^[a-zA-Z]:/.test(t)),
   );
+}
+
+/** Conservative containment: only a definite `inside` is trusted. */
+function containmentFor(
+  rawPath: string,
+  resolver: ContainmentResolver | undefined,
+): ContainmentVerdict | "heuristic" {
+  if (!resolver) return "heuristic";
+  try {
+    return resolver(rawPath);
+  } catch {
+    return "unknown";
+  }
 }
 
 function classifyFilesystem(
   toolName: string,
   params: Record<string, unknown>,
+  options?: ClassifyOptions | undefined,
 ): ClassificationResult | null {
   const lower = toolName.toLowerCase();
   const isDelete = /delete|remove|unlink|rm\b/.test(lower);
   const isWrite = /write|edit|put|patch|create|move|rename/.test(lower);
   const isRead = /read|get|cat|stat|list|ls\b/.test(lower);
   if (!isDelete && !isWrite && !isRead) return null;
-  const path = String(params.path ?? params.target ?? params.file ?? params.filepath ?? "");
-  if (!path) return null;
+  const rawPath = String(params.path ?? params.target ?? params.file ?? params.filepath ?? "");
+  if (!rawPath) return null;
+  const path = normalizePathForMatching(rawPath);
 
   const protectedHits = matchAny(path, PROTECTED_PATH_PATTERNS);
   const workspaceHits = matchAny(path, WORKSPACE_PATH_PATTERNS);
+  const containment =
+    isDelete || isWrite ? containmentFor(rawPath, options?.containment) : "heuristic";
+  const notContained = containment === "outside" || containment === "unknown";
 
   if (isDelete && protectedHits.length > 0) {
     return {
       classification: "fs.delete.protected",
       decision: "block",
-      reason: `delete on protected path ${path} would reduce options irreversibly without consent (Law 1 + Law 3).`,
+      reason: `delete on protected path ${rawPath} would reduce options irreversibly without consent (Law 1 + Law 3).`,
       matchedPatterns: protectedHits,
+    };
+  }
+  if (isDelete && notContained) {
+    return {
+      classification: "fs.delete.external",
+      decision: "approval",
+      reason: `delete on path ${rawPath} is ${containment === "unknown" ? "unresolvable" : "outside the workspace"}; not eligible for staged allow (Law 1 + Law 3).`,
+      matchedPatterns: [`containment:${containment}`],
     };
   }
   if (isDelete && workspaceHits.length > 0) {
     return {
       classification: "fs.delete.workspace",
       decision: "approval",
-      reason: `delete on workspace path ${path}; reversible cost is moderate but consent should be confirmed (Law 1).`,
+      reason: `delete on workspace path ${rawPath}; reversible cost is moderate but consent should be confirmed (Law 1).`,
       matchedPatterns: workspaceHits,
     };
   }
@@ -228,16 +282,27 @@ function classifyFilesystem(
     return {
       classification: "fs.delete.workspace",
       decision: "approval",
-      reason: `delete on uncategorized path ${path}; requesting approval out of caution (Law 3).`,
-      matchedPatterns: [],
+      reason:
+        containment === "inside"
+          ? `delete on workspace-contained path ${rawPath}; requesting approval (Law 1).`
+          : `delete on uncategorized path ${rawPath}; requesting approval out of caution (Law 3).`,
+      matchedPatterns: containment === "inside" ? ["containment:inside"] : [],
     };
   }
   if (isWrite && protectedHits.length > 0) {
     return {
       classification: "fs.write.protected",
       decision: "approval",
-      reason: `write on protected path ${path}; requesting approval (Law 1).`,
+      reason: `write on protected path ${rawPath}; requesting approval (Law 1).`,
       matchedPatterns: protectedHits,
+    };
+  }
+  if (isWrite && notContained) {
+    return {
+      classification: "fs.write.external",
+      decision: "approval",
+      reason: `write on path ${rawPath} is ${containment === "unknown" ? "unresolvable" : "outside the workspace"}; requesting approval (Law 1).`,
+      matchedPatterns: [`containment:${containment}`],
     };
   }
   if (isWrite) {
@@ -245,7 +310,8 @@ function classifyFilesystem(
       classification: "fs.write.workspace",
       decision: "allow",
       reason: `write inside workspace; reversible.`,
-      matchedPatterns: workspaceHits,
+      matchedPatterns:
+        containment === "inside" ? [...workspaceHits, "containment:inside"] : workspaceHits,
     };
   }
   return {
@@ -259,6 +325,7 @@ function classifyFilesystem(
 function classifyExec(
   toolName: string,
   params: Record<string, unknown>,
+  options?: ClassifyOptions | undefined,
 ): ClassificationResult | null {
   if (!/exec|shell|bash|sh|run|command/i.test(toolName)) return null;
   const command = String(params.command ?? params.cmd ?? params.argv ?? "");
@@ -338,16 +405,41 @@ function classifyExec(
   const deleteHits = matchAny(command, EXEC_DELETE_PATTERNS);
   if (deleteHits.length > 0) {
     const pathArgs = extractPathArgs(command);
-    const protectedHits = pathArgs.flatMap((p) => matchAny(p, PROTECTED_PATH_PATTERNS));
+    const normalizedArgs = pathArgs.map(normalizePathForMatching);
+    const protectedHits = normalizedArgs.flatMap((p) => matchAny(p, PROTECTED_PATH_PATTERNS));
     if (protectedHits.length > 0) {
       return {
         classification: "fs.delete.protected",
         decision: "block",
-        reason: `shell delete targets protected path (${pathArgs.filter((p) => matchAny(p, PROTECTED_PATH_PATTERNS).length > 0).join(", ")}); irreversible without consent (Law 1 + Law 3).`,
+        reason: `shell delete targets protected path (${pathArgs.filter((p) => matchAny(normalizePathForMatching(p), PROTECTED_PATH_PATTERNS).length > 0).join(", ")}); irreversible without consent (Law 1 + Law 3).`,
         matchedPatterns: [...deleteHits, ...protectedHits],
       };
     }
-    const workspaceHits = pathArgs.flatMap((p) => matchAny(p, WORKSPACE_PATH_PATTERNS));
+    if (options?.containment) {
+      // Any target outside (or unresolvable) makes the whole command external.
+      // A delete with no recognizable path argument (`rm "$DIR"`, `rm foo`) is
+      // an unfamiliar target and is treated as unresolvable, not benign.
+      const verdicts =
+        pathArgs.length > 0
+          ? pathArgs.map((p) => containmentFor(p, options.containment))
+          : (["unknown"] as ContainmentVerdict[]);
+      const worst = verdicts.find((v) => v === "outside" || v === "unknown");
+      if (worst) {
+        return {
+          classification: "fs.delete.external",
+          decision: "approval",
+          reason: `shell delete targets a path ${worst === "unknown" ? "that cannot be resolved" : "outside the workspace"}; not eligible for staged allow (Law 1 + Law 3).`,
+          matchedPatterns: [...deleteHits, `containment:${worst}`],
+        };
+      }
+      return {
+        classification: "fs.delete.workspace",
+        decision: "approval",
+        reason: `shell delete targets workspace-contained path(s); requesting approval (Law 1).`,
+        matchedPatterns: [...deleteHits, "containment:inside"],
+      };
+    }
+    const workspaceHits = normalizedArgs.flatMap((p) => matchAny(p, WORKSPACE_PATH_PATTERNS));
     if (workspaceHits.length > 0) {
       return {
         classification: "fs.delete.workspace",
@@ -375,31 +467,103 @@ function classifyHttp(
   const url = String(params.url ?? params.endpoint ?? "");
   if (!url) return null;
 
-  const isPublic = PUBLIC_HOST_PATTERN.test(url);
-  const isWrite = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+  // Write semantics are decided from the method alone — never downgraded by
+  // the destination. Destination privacy only picks the public/private class.
+  const isWrite = !HTTP_READ_METHODS.has(method);
+  const destination = classifyHttpDestination(url);
+  const isPublic = destination !== "private";
+  const marker = isPublic ? PUBLIC_HOST_MARKER : PRIVATE_HOST_MARKER;
 
   if (isWrite && isPublic) {
     return {
       classification: "http.public-write",
       decision: "approval",
-      reason: `${method} to public URL ${url} could create external state (Law 1 + Law 3).`,
-      matchedPatterns: [PUBLIC_HOST_PATTERN.source],
+      reason: `${method} to ${destination === "unparseable" ? "unparseable" : "public"} URL ${url} could create external state (Law 1 + Law 3).`,
+      matchedPatterns: [marker],
     };
   }
-  if (!isWrite && isPublic) {
+  if (isWrite) {
+    return {
+      classification: "http.private-write",
+      decision: "allow",
+      reason: `${method} to private/loopback host ${url} is a local state change; allowing with audit (not treated as a read).`,
+      matchedPatterns: [marker],
+    };
+  }
+  if (isPublic) {
     return {
       classification: "http.public-read",
       decision: "allow",
       reason: `${method} to public URL ${url} is a read; allow by default (strict mode may escalate).`,
-      matchedPatterns: [PUBLIC_HOST_PATTERN.source],
+      matchedPatterns: [marker],
     };
   }
   return {
     classification: "http.read",
     decision: "allow",
-    reason: `${method} is a read or targets a local/private host.`,
-    matchedPatterns: [],
+    reason: `${method} targets a local/private host and is a read.`,
+    matchedPatterns: [marker],
   };
+}
+
+const HTTP_READ_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
+
+type HttpDestination = "private" | "public" | "unparseable";
+
+function parseIpv4(host: string): number[] | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return null;
+  const octets = m.slice(1).map(Number);
+  return octets.every((o) => o >= 0 && o <= 255) ? octets : null;
+}
+
+function isPrivateIpv4(octets: number[]): boolean {
+  const [a, b] = octets as [number, number, number, number];
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return false;
+}
+
+function isPrivateIpv6(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === "::1" || h === "::") return true;
+  if (/^fe[89ab][0-9a-f]:/.test(h)) return true; // link-local fe80::/10
+  if (/^f[cd][0-9a-f]{2}:/.test(h)) return true; // unique-local fc00::/7
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(h);
+  if (mapped) {
+    const v4 = parseIpv4(mapped[1]!);
+    return v4 !== null && isPrivateIpv4(v4);
+  }
+  return false;
+}
+
+/**
+ * Classify the destination of a URL by parsing it fully (WHATWG URL) and
+ * examining the complete hostname / IP literal. Unparseable → public
+ * (conservative: writes require approval).
+ */
+function classifyHttpDestination(url: string): HttpDestination {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return "unparseable";
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return "unparseable";
+  }
+  let host = parsed.hostname.toLowerCase();
+  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
+  if (host === "") return "unparseable";
+  if (host === "localhost" || host.endsWith(".localhost")) return "private";
+  const v4 = parseIpv4(host);
+  if (v4) return isPrivateIpv4(v4) ? "private" : "public";
+  if (host.includes(":")) return isPrivateIpv6(host) ? "private" : "public";
+  return "public";
 }
 
 function classifyMessage(
@@ -618,8 +782,8 @@ export function classifyToolCall(
       ? params
       : {};
   const results: (ClassificationResult | null)[] = [
-    classifyFilesystem(name, safeParams),
-    classifyExec(name, safeParams),
+    classifyFilesystem(name, safeParams, options),
+    classifyExec(name, safeParams, options),
     classifyHttp(name, safeParams),
     classifyMessage(name, safeParams),
     classifyCodePatch(name, safeParams),

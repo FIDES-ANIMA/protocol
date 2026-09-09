@@ -50,6 +50,7 @@ import {
   executeMandateFinalize,
   executeEmergencyOverrideSubmit,
   emergencyOverrideStoreSibling,
+  stewardKeyBindingsFromTrustGraph,
 } from "./tools.js";
 
 // ── Re-exports (library API via trust-core) ────────────────────────
@@ -565,6 +566,7 @@ export default defineToolPlugin({
           emergencyOverrideStorePath: emergencyOverrideStoreSibling(
             stack.config.mandateStorePath,
           ),
+          stewardKeyBindings: stewardKeyBindingsFromTrustGraph(stack.trustGraph),
         });
       },
     }),

@@ -10,14 +10,21 @@
 
 import {
   createEnforcementRuntime,
+  createWorkspaceTrashRecovery,
   type EnforcementRuntime,
   type FppBeforeToolCallResult,
   type FppRuntimeAdapter,
 } from "@fides-anima/fpp-enforcement-core";
-import { resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
+import {
+  resolveWorkspaceRoot,
+  workspaceFile,
+} from "@fides-anima/fpp-protocol-core";
 
 export const CODEX_HARNESS_ID = "codex" as const;
 export const CODEX_INTERCEPTION_STRATEGY = "codex-hooks-PreToolUse" as const;
+
+/** Hook invocations are one-shot processes; pending receipts persist here. */
+export const CODEX_PENDING_RECEIPTS_FILE = "fpp-receipts-pending.json" as const;
 
 export const CODEX_GRADED_GUARANTEE =
   "Codex PreToolUse hooks enforce dispositions for shell/Bash reliably; " +
@@ -55,6 +62,8 @@ export function createCodexAdapter(
     interceptionStrategy: CODEX_INTERCEPTION_STRATEGY,
     gradedGuarantee: CODEX_GRADED_GUARANTEE,
     getWorkspacePaths: () => ({ workspaceRoot }),
+    // Destructive staged-allow needs a concrete recovery artifact (audit F05).
+    recoveryProvider: createWorkspaceTrashRecovery(),
     // No Codex operator approval UI for FPP — unattended only.
   };
 }
@@ -63,14 +72,23 @@ export function createCodexRuntime(
   configInput: unknown,
   options: CodexAdapterOptions = {},
 ): EnforcementRuntime {
-  // Force unattended when config omits dispositionMode.
-  const input =
+  // Force unattended when config omits dispositionMode; persist pending
+  // receipts unless the operator set/disabled the path explicitly.
+  const base =
     configInput && typeof configInput === "object"
-      ? {
-          dispositionMode: "unattended",
-          ...(configInput as Record<string, unknown>),
-        }
-      : { dispositionMode: "unattended" };
+      ? (configInput as Record<string, unknown>)
+      : {};
+  const input = {
+    dispositionMode: "unattended",
+    ...("receiptPendingStorePath" in base
+      ? {}
+      : {
+          receiptPendingStorePath: workspaceFile(CODEX_PENDING_RECEIPTS_FILE, {
+            profile: "codex",
+          }),
+        }),
+    ...base,
+  };
   return createEnforcementRuntime(input, createCodexAdapter(options));
 }
 
@@ -78,7 +96,8 @@ export async function handleCodexPreToolUse(
   runtime: EnforcementRuntime,
   event: CodexHookEvent,
 ): Promise<CodexHookDecision> {
-  const toolCallId = event.tool_call_id ?? `codex-${Date.now()}`;
+  // Missing ids are passed through; core derives a durable action id (F09).
+  const toolCallId = event.tool_call_id;
   const result: FppBeforeToolCallResult = await runtime.onBeforeToolCall(
     {
       toolName: event.tool_name,

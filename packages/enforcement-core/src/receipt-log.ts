@@ -28,6 +28,7 @@ import {
   verifyReceiptSignature,
   type SignedReceipt,
 } from "./receipt-signer.js";
+import { withFileLock } from "./file-lock.js";
 
 export const RECEIPT_LOG_KIND = "conformance-receipt" as const;
 const ZERO = "0".repeat(64);
@@ -90,19 +91,22 @@ export function appendSignedReceipt(
 ): { hash: string; previousHash: string } {
   const resolved = resolve(logPath);
   mkdirSync(dirname(resolved), { recursive: true });
-  const previousHash = readPreviousHash(resolved);
+  // Tail read + append are serialized across processes to prevent chain forks.
+  return withFileLock(resolved, () => {
+    const previousHash = readPreviousHash(resolved);
 
-  const entry: Record<string, unknown> = {
-    previousHash,
-    timestamp: new Date().toISOString(),
-    kind: RECEIPT_LOG_KIND,
-    receipt,
-  };
-  const hash = hashReceiptEntry(entry);
-  entry.hash = hash;
+    const entry: Record<string, unknown> = {
+      previousHash,
+      timestamp: new Date().toISOString(),
+      kind: RECEIPT_LOG_KIND,
+      receipt,
+    };
+    const hash = hashReceiptEntry(entry);
+    entry.hash = hash;
 
-  appendFileSync(resolved, JSON.stringify(entry) + "\n");
-  return { hash, previousHash };
+    appendFileSync(resolved, JSON.stringify(entry) + "\n");
+    return { hash, previousHash };
+  });
 }
 
 export function verifyReceiptLog(logPath: string): ReceiptLogVerifyReport {

@@ -5,10 +5,17 @@
  * the store records an explicit reduced-confidence fallback key and never
  * silently joins ambiguous calls. Raw tool parameters are never retained —
  * only digests.
+ *
+ * When `persistPath` is set the pending/finalized state is reloaded from disk
+ * before, and flushed after, every mutation under a cross-process lock. This
+ * is what lets one-shot hook processes (Cursor pre/post hooks) correlate a
+ * before-event with the after-event that runs in a different process.
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { DIGEST_DOMAINS, digest } from "@fides-anima/fpp-protocol-core";
 import type { GovernanceMode } from "@fides-anima/fpp-protocol-core";
+import { withFileLock, writeFileAtomic } from "./file-lock.js";
 
 export type CorrelationConfidence = "full" | "reduced";
 
@@ -89,10 +96,24 @@ export type FinalizeResult = PendingReceiptRecord & {
 export type ReceiptStoreOptions = {
   maxPending?: number;
   pendingTtlMs?: number;
+  /**
+   * Durable pending-state file. Required for adapters whose before/after hooks
+   * run in separate short-lived processes.
+   */
+  persistPath?: string | undefined;
+};
+
+type PersistedReceiptState = {
+  schemaVersion: 1;
+  seq: number;
+  pending: Array<[string, PendingReceiptRecord]>;
+  finalized: Array<[string, PendingReceiptRecord]>;
 };
 
 const DEFAULT_MAX_PENDING = 256;
 const DEFAULT_PENDING_TTL_MS = 15 * 60_000;
+/** Finalized records retained on disk for idempotent re-finalization. */
+const MAX_PERSISTED_FINALIZED = 1024;
 
 export function digestActionParams(params: Record<string, unknown>): string {
   return digest({
@@ -152,26 +173,38 @@ export class ReceiptStore {
   private readonly pending = new Map<string, PendingReceiptRecord>();
   private readonly finalizedByKey = new Map<string, PendingReceiptRecord>();
   private readonly orphans: PendingReceiptRecord[] = [];
+  private readonly persistPath: string | undefined;
   private seq = 0;
 
   constructor(options: ReceiptStoreOptions = {}) {
     this.maxPending = options.maxPending ?? DEFAULT_MAX_PENDING;
     this.pendingTtlMs = options.pendingTtlMs ?? DEFAULT_PENDING_TTL_MS;
+    this.persistPath = options.persistPath;
+    if (this.persistPath) this.loadFromDisk();
+  }
+
+  /** True when pending state survives process exit. */
+  isDurable(): boolean {
+    return this.persistPath !== undefined;
   }
 
   pendingCount(): number {
+    this.refresh();
     return this.pending.size;
   }
 
   finalizedCount(): number {
+    this.refresh();
     return this.finalizedByKey.size;
   }
 
   getPending(toolCallId: string): PendingReceiptRecord | undefined {
+    this.refresh();
     return this.pending.get(toolCallId);
   }
 
   getFinalized(toolCallId: string): PendingReceiptRecord | undefined {
+    this.refresh();
     return this.finalizedByKey.get(toolCallId);
   }
 
@@ -180,6 +213,123 @@ export class ReceiptStore {
   }
 
   propose(input: ProposeInput): ProposeResult {
+    return this.mutate(() => this.proposeLocked(input));
+  }
+
+  recordAuthorization(
+    toolCallId: string,
+    authorization: string,
+    nowIso: string,
+  ): PendingReceiptRecord | undefined {
+    return this.mutate(() =>
+      this.recordAuthorizationLocked(toolCallId, authorization, nowIso),
+    );
+  }
+
+  finalizeExecution(
+    toolCallId: string,
+    outcome: string,
+    nowIso: string,
+  ): FinalizeResult | undefined {
+    return this.mutate(() =>
+      this.finalizeExecutionLocked(toolCallId, outcome, nowIso),
+    );
+  }
+
+  sweepExpired(nowIso: string): PendingReceiptRecord[] {
+    return this.mutate(() => this.sweepExpiredLocked(nowIso));
+  }
+
+  /** Mark all remaining pending entries as orphans (shutdown/restart). */
+  orphanAllPending(
+    nowIso: string,
+    reason: AllowedOrphanOutcome = "audit_gap_orphan",
+  ): PendingReceiptRecord[] {
+    return this.mutate(() => this.orphanAllPendingLocked(nowIso, reason));
+  }
+
+  /**
+   * Transition-abort leftovers at a governance drain deadline.
+   * Distinct from generic shutdown orphans (`audit_gap_orphan`).
+   */
+  abortPendingForGovernanceTransition(
+    nowIso: string,
+    governanceEpoch: number,
+    eligibleToolCallIds: ReadonlySet<string>,
+    persist?: ((candidate: PendingReceiptRecord) => void) | undefined,
+  ): PendingReceiptRecord[] {
+    return this.mutate(() =>
+      this.abortPendingForGovernanceTransitionLocked(
+        nowIso,
+        governanceEpoch,
+        eligibleToolCallIds,
+        persist,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------------
+
+  /** Run a mutation with reload-before / flush-after under the file lock. */
+  private mutate<T>(fn: () => T): T {
+    if (!this.persistPath) return fn();
+    return withFileLock(this.persistPath, () => {
+      this.loadFromDisk();
+      const out = fn();
+      this.flushToDisk();
+      return out;
+    });
+  }
+
+  /** Read-side refresh so a sibling process's writes are visible. */
+  private refresh(): void {
+    if (!this.persistPath) return;
+    withFileLock(this.persistPath, () => this.loadFromDisk());
+  }
+
+  private loadFromDisk(): void {
+    if (!this.persistPath || !existsSync(this.persistPath)) return;
+    let parsed: PersistedReceiptState;
+    try {
+      parsed = JSON.parse(
+        readFileSync(this.persistPath, "utf8"),
+      ) as PersistedReceiptState;
+    } catch {
+      // Corrupt state is a fail-closed condition for correlation: keep the
+      // in-memory view (possibly empty) rather than trusting partial data.
+      return;
+    }
+    if (parsed.schemaVersion !== 1) return;
+    this.pending.clear();
+    this.finalizedByKey.clear();
+    for (const [k, v] of parsed.pending ?? []) this.pending.set(k, v);
+    for (const [k, v] of parsed.finalized ?? []) this.finalizedByKey.set(k, v);
+    this.seq = Math.max(this.seq, Number(parsed.seq) || 0);
+  }
+
+  private flushToDisk(): void {
+    if (!this.persistPath) return;
+    const finalized = [...this.finalizedByKey.entries()];
+    const trimmed =
+      finalized.length > MAX_PERSISTED_FINALIZED
+        ? finalized.slice(finalized.length - MAX_PERSISTED_FINALIZED)
+        : finalized;
+    const state: PersistedReceiptState = {
+      schemaVersion: 1,
+      seq: this.seq,
+      pending: [...this.pending.entries()],
+      finalized: trimmed,
+    };
+    writeFileAtomic(this.persistPath, `${JSON.stringify(state)}\n`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Core (lock-free) implementations
+  // ---------------------------------------------------------------------------
+
+  private proposeLocked(input: ProposeInput): ProposeResult {
     if (
       (input.governanceEpoch === undefined) !==
       (input.governanceMode === undefined)
@@ -253,7 +403,7 @@ export class ReceiptStore {
     return { record, finalized: false };
   }
 
-  recordAuthorization(
+  private recordAuthorizationLocked(
     toolCallId: string,
     authorization: string,
     nowIso: string,
@@ -277,7 +427,7 @@ export class ReceiptStore {
     return record;
   }
 
-  finalizeExecution(
+  private finalizeExecutionLocked(
     toolCallId: string,
     outcome: string,
     nowIso: string,
@@ -300,7 +450,7 @@ export class ReceiptStore {
     return record;
   }
 
-  sweepExpired(nowIso: string): PendingReceiptRecord[] {
+  private sweepExpiredLocked(nowIso: string): PendingReceiptRecord[] {
     const now = Date.parse(nowIso);
     const expired: PendingReceiptRecord[] = [];
     for (const [key, record] of this.pending) {
@@ -317,10 +467,9 @@ export class ReceiptStore {
     return expired;
   }
 
-  /** Mark all remaining pending entries as orphans (shutdown/restart). */
-  orphanAllPending(
+  private orphanAllPendingLocked(
     nowIso: string,
-    reason: AllowedOrphanOutcome = "audit_gap_orphan",
+    reason: AllowedOrphanOutcome,
   ): PendingReceiptRecord[] {
     if (
       !(ALLOWED_ORPHAN_OUTCOMES as readonly string[]).includes(reason)
@@ -342,11 +491,7 @@ export class ReceiptStore {
     return out;
   }
 
-  /**
-   * Transition-abort leftovers at a governance drain deadline.
-   * Distinct from generic shutdown orphans (`audit_gap_orphan`).
-   */
-  abortPendingForGovernanceTransition(
+  private abortPendingForGovernanceTransitionLocked(
     nowIso: string,
     governanceEpoch: number,
     eligibleToolCallIds: ReadonlySet<string>,

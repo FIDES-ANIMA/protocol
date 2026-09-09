@@ -9,15 +9,23 @@
 
 import {
   createEnforcementRuntime,
+  createWorkspaceTrashRecovery,
   type EnforcementRuntime,
   type FppBeforeToolCallResult,
   type FppRuntimeAdapter,
 } from "@fides-anima/fpp-enforcement-core";
-import { resolveWorkspaceRoot } from "@fides-anima/fpp-protocol-core";
+import {
+  resolveWorkspaceRoot,
+  workspaceFile,
+} from "@fides-anima/fpp-protocol-core";
 
 export const CLAUDE_CODE_HARNESS_ID = "claude-code" as const;
 export const CLAUDE_CODE_INTERCEPTION_STRATEGY =
   "claude-code-hooks-PreToolUse" as const;
+
+/** Hook invocations are one-shot processes; pending receipts persist here. */
+export const CLAUDE_CODE_PENDING_RECEIPTS_FILE =
+  "fpp-receipts-pending.json" as const;
 
 export type ClaudeCodeAdapterOptions = {
   workspaceRoot?: string | undefined;
@@ -52,6 +60,23 @@ export function createClaudeCodeAdapter(
     harnessId: CLAUDE_CODE_HARNESS_ID,
     interceptionStrategy: CLAUDE_CODE_INTERCEPTION_STRATEGY,
     getWorkspacePaths: () => ({ workspaceRoot }),
+    // Destructive staged-allow needs a concrete recovery artifact (audit F05).
+    recoveryProvider: createWorkspaceTrashRecovery(),
+  };
+}
+
+/** Durable pending receipts unless the operator set/disabled the path. */
+export function withClaudeCodeConfigDefaults(configInput: unknown): unknown {
+  const base =
+    configInput && typeof configInput === "object"
+      ? (configInput as Record<string, unknown>)
+      : {};
+  if ("receiptPendingStorePath" in base) return base;
+  return {
+    ...base,
+    receiptPendingStorePath: workspaceFile(CLAUDE_CODE_PENDING_RECEIPTS_FILE, {
+      profile: "claude-code",
+    }),
   };
 }
 
@@ -60,7 +85,7 @@ export function createClaudeCodeRuntime(
   options: ClaudeCodeAdapterOptions = {},
 ): EnforcementRuntime {
   return createEnforcementRuntime(
-    configInput,
+    withClaudeCodeConfigDefaults(configInput),
     createClaudeCodeAdapter(options),
   );
 }
@@ -69,7 +94,8 @@ export async function handleClaudeCodePreToolUse(
   runtime: EnforcementRuntime,
   event: ClaudeCodeHookEvent,
 ): Promise<ClaudeCodeHookDecision> {
-  const toolCallId = event.tool_call_id ?? `claude-${Date.now()}`;
+  // Missing ids are passed through; core derives a durable action id (F09).
+  const toolCallId = event.tool_call_id;
   const result: FppBeforeToolCallResult = await runtime.onBeforeToolCall(
     {
       toolName: event.tool_name,

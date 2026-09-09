@@ -7,15 +7,12 @@
  * and revoke never invalidate Ed25519 signatures on the grant blob.
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   AUTHZ,
+  canonicalizeV2,
+  mandateSigningFields,
   parseStandingMandate,
   validateMandateValidity,
   verifyMandateSignature,
@@ -27,6 +24,7 @@ import {
 } from "@fides-anima/fpp-protocol-core";
 import type { ClassificationId } from "./risk-classifier.js";
 import type { LiveMandateCoverage } from "./disposition-engine.js";
+import { withFileLock, writeFileAtomic } from "./file-lock.js";
 
 export type { MandateLedgerEntry, MandateStoreFile };
 
@@ -74,10 +72,43 @@ function assertMandateSignature(mandate: StandingMandateV1): void {
   }
 }
 
-function seedLedgerFromMandate(mandate: StandingMandateV1): MandateLedgerEntry {
+/**
+ * Signed ceiling for a mandate. Signed mandates without `maxActions` fall back
+ * to the operator's `mandateDefaultMaxActions` so accounting is always finite.
+ * Standing-allowlist entries are unsigned config and carry no per-grant budget.
+ */
+function signedCeiling(
+  mandate: StandingMandateV1,
+  defaultMaxActions: number,
+): number | null {
+  const max = mandate.budgets.maxActions;
+  if (max !== undefined) {
+    return Number.isInteger(max) && max >= 0 ? max : null;
+  }
+  if (mandate.issuerClass === "standing-allowlist") return null;
+  return Number.isInteger(defaultMaxActions) && defaultMaxActions >= 0
+    ? defaultMaxActions
+    : null;
+}
+
+/**
+ * Initialize the unsigned ledger from the *signed* ceiling. The unsigned
+ * `remainingActions` may only lower the starting balance — never raise it.
+ */
+function seedLedgerFromMandate(
+  mandate: StandingMandateV1,
+  defaultMaxActions: number,
+): MandateLedgerEntry {
   const entry: MandateLedgerEntry = {};
-  if (mandate.budgets.remainingActions !== undefined) {
-    entry.remainingActions = mandate.budgets.remainingActions;
+  const ceiling = signedCeiling(mandate, defaultMaxActions);
+  const incoming = mandate.budgets.remainingActions;
+  if (ceiling !== null) {
+    entry.remainingActions =
+      incoming !== undefined && Number.isInteger(incoming) && incoming >= 0
+        ? Math.min(incoming, ceiling)
+        : ceiling;
+  } else if (incoming !== undefined) {
+    entry.remainingActions = incoming;
   }
   if (mandate.revoked === true) {
     entry.revoked = true;
@@ -85,10 +116,33 @@ function seedLedgerFromMandate(mandate: StandingMandateV1): MandateLedgerEntry {
   return entry;
 }
 
-function hasLedgerBudget(ledger: MandateLedgerEntry | undefined): boolean {
+/**
+ * Effective remaining budget clamped to the signed ceiling.
+ * `null` means unlimited (standing-allowlist only); otherwise a finite count.
+ */
+function effectiveRemaining(
+  mandate: StandingMandateV1,
+  ledger: MandateLedgerEntry | undefined,
+  defaultMaxActions: number,
+): number | null {
+  const ceiling = signedCeiling(mandate, defaultMaxActions);
   const remaining = ledger?.remainingActions;
-  if (remaining === undefined) return true;
-  return remaining > 0;
+  if (ceiling === null) {
+    return remaining === undefined ? null : remaining;
+  }
+  if (remaining === undefined || !Number.isInteger(remaining) || remaining < 0) {
+    // Ledger missing/invalid for a signed grant: fail closed to zero.
+    return 0;
+  }
+  return Math.min(remaining, ceiling);
+}
+
+function hasBudget(remaining: number | null): boolean {
+  return remaining === null || remaining > 0;
+}
+
+function signedContentKey(mandate: StandingMandateV1): string {
+  return `${canonicalizeV2(mandateSigningFields(mandate))}|${(mandate.signature ?? "").toLowerCase()}`;
 }
 
 export class MandateStore {
@@ -118,6 +172,10 @@ export class MandateStore {
   }
 
   reload(): void {
+    withFileLock(this.path, () => this.reloadLocked());
+  }
+
+  private reloadLocked(): void {
     if (!existsSync(this.path)) {
       this.mandates = [];
       this.ledgers = {};
@@ -135,8 +193,11 @@ export class MandateStore {
       if (this.tryMigrateBrokenMandate(mandate, i)) {
         migrated = true;
       } else if (this.ledgers[mandate.mandateId] === undefined) {
-        // Legacy file without ledgers: seed from signed blob so budget still works.
-        this.ledgers[mandate.mandateId] = seedLedgerFromMandate(mandate);
+        // Legacy file without ledgers: seed from signed ceiling so budget still works.
+        this.ledgers[mandate.mandateId] = seedLedgerFromMandate(
+          mandate,
+          this.mandateDefaultMaxActions,
+        );
         migrated = true;
       }
     }
@@ -190,7 +251,8 @@ export class MandateStore {
       ...(this.ledgers[mandate.mandateId] ?? {}),
     };
     if (priorRemaining !== undefined) {
-      ledger.remainingActions = priorRemaining;
+      // Prior unsigned balance may only lower the signed ceiling.
+      ledger.remainingActions = Math.min(priorRemaining, maxActions);
     } else if (ledger.remainingActions === undefined) {
       ledger.remainingActions = maxActions;
     }
@@ -207,75 +269,102 @@ export class MandateStore {
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.path), { recursive: true });
     const file: MandateStoreFile = {
       schemaVersion: 1,
       mandates: this.mandates,
       ledgers: this.ledgers,
     };
-    writeFileSync(this.path, `${JSON.stringify(file, null, 2)}\n`, "utf8");
+    writeFileAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`);
   }
 
-  /** Insert or replace a mandate after schema + signature checks. */
-  put(mandate: StandingMandateV1): void {
+  /**
+   * Insert a mandate after schema + signature checks.
+   *
+   * Replay-safe: re-putting an existing `mandateId` with identical signed
+   * content is an idempotent no-op that preserves the ledger (counters and
+   * revocation tombstone). Different content under an existing ID throws.
+   */
+  put(mandate: StandingMandateV1): { idempotent: boolean } {
     const parsed = parseStandingMandate(mandate);
     if (!parsed.ok) {
       throw new Error(`invalid mandate: ${parsed.error}`);
     }
     assertMandateSignature(parsed.mandate);
-    const idx = this.mandates.findIndex(
-      (m) => m.mandateId === parsed.mandate.mandateId,
-    );
-    if (idx >= 0) {
-      this.mandates[idx] = parsed.mandate;
-    } else {
+    return withFileLock(this.path, () => {
+      this.reloadLocked();
+      const idx = this.mandates.findIndex(
+        (m) => m.mandateId === parsed.mandate.mandateId,
+      );
+      if (idx >= 0) {
+        const existing = this.mandates[idx]!;
+        if (signedContentKey(existing) !== signedContentKey(parsed.mandate)) {
+          throw new Error(
+            `mandate ${parsed.mandate.mandateId} already exists with different signed content`,
+          );
+        }
+        return { idempotent: true };
+      }
       this.mandates.push(parsed.mandate);
-    }
-    this.ledgers[parsed.mandate.mandateId] = seedLedgerFromMandate(
-      parsed.mandate,
-    );
-    this.persist();
+      this.ledgers[parsed.mandate.mandateId] = seedLedgerFromMandate(
+        parsed.mandate,
+        this.mandateDefaultMaxActions,
+      );
+      this.persist();
+      return { idempotent: false };
+    });
   }
 
   getRemaining(mandateId: string): number | null {
     this.reload();
     const m = this.mandates.find((x) => x.mandateId === mandateId);
     if (!m) return null;
-    const remaining = this.ledgers[mandateId]?.remainingActions;
-    return remaining ?? null;
+    return effectiveRemaining(
+      m,
+      this.ledgers[mandateId],
+      this.mandateDefaultMaxActions,
+    );
   }
 
   /**
-   * Atomically debit one action from a mandate's remaining budget.
-   * Mutates the unsigned ledger only — never the signed grant blob.
+   * Atomically debit one action from a mandate's remaining budget under the
+   * cross-process lock. Mutates the unsigned ledger only — never the signed
+   * grant blob. Returns false when no budget remains (callers fail closed).
    */
   debit(mandateId: string): boolean {
-    this.reload();
-    const idx = this.mandates.findIndex((m) => m.mandateId === mandateId);
-    if (idx < 0) return false;
-    const ledger = { ...(this.ledgers[mandateId] ?? {}) };
-    const remaining = ledger.remainingActions;
-    if (remaining !== undefined && remaining <= 0) return false;
-    if (remaining !== undefined) {
+    return withFileLock(this.path, () => {
+      this.reloadLocked();
+      const mandate = this.mandates.find((m) => m.mandateId === mandateId);
+      if (!mandate) return false;
+      const ledger = { ...(this.ledgers[mandateId] ?? {}) };
+      if (ledger.revoked === true) return false;
+      const remaining = effectiveRemaining(
+        mandate,
+        ledger,
+        this.mandateDefaultMaxActions,
+      );
+      if (remaining === null) return true; // unlimited standing-allowlist entry
+      if (remaining <= 0) return false;
       ledger.remainingActions = remaining - 1;
       this.ledgers[mandateId] = ledger;
       this.persist();
-    }
-    return true;
+      return true;
+    });
   }
 
   /**
    * Revoke a mandate via the unsigned ledger. Signed blob is left unchanged.
    */
   revoke(mandateId: string): boolean {
-    this.reload();
-    const exists = this.mandates.some((m) => m.mandateId === mandateId);
-    if (!exists) return false;
-    const ledger = { ...(this.ledgers[mandateId] ?? {}) };
-    ledger.revoked = true;
-    this.ledgers[mandateId] = ledger;
-    this.persist();
-    return true;
+    return withFileLock(this.path, () => {
+      this.reloadLocked();
+      const exists = this.mandates.some((m) => m.mandateId === mandateId);
+      if (!exists) return false;
+      const ledger = { ...(this.ledgers[mandateId] ?? {}) };
+      ledger.revoked = true;
+      this.ledgers[mandateId] = ledger;
+      this.persist();
+      return true;
+    });
   }
 
   findCoverage(
@@ -302,7 +391,17 @@ export class MandateStore {
         nowMs: options.nowMs,
       });
       if (!validity.valid) continue;
-      if (!hasLedgerBudget(ledger)) continue;
+      if (
+        !hasBudget(
+          effectiveRemaining(
+            parsed.mandate,
+            ledger,
+            this.mandateDefaultMaxActions,
+          ),
+        )
+      ) {
+        continue;
+      }
       const classes = parsed.mandate.scope.classifications ?? [];
       if (!classes.includes(classification)) continue;
       return {

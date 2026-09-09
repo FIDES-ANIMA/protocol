@@ -33,7 +33,9 @@
         "description": "Classification ids that should require user approval (requireApproval). unknown.unclassified is included by default.",
         "default": [
           "fs.delete.workspace",
+          "fs.delete.external",
           "fs.write.protected",
+          "fs.write.external",
           "pkg.install",
           "pkg.publish",
           "http.public-write",

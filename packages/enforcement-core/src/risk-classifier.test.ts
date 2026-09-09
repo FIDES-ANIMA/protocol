@@ -100,13 +100,135 @@ test("GET to public host is http.public-read -> allow", () => {
   assert.equal(r.decision, "allow");
 });
 
-test("POST to localhost is http.read -> allow (private host)", () => {
+test("POST to localhost is http.private-write (never a read) -> allow", () => {
   const r = classifyToolCall("http_request", {
     method: "POST",
     url: "http://localhost:8080/internal",
   });
-  assert.equal(r.classification, "http.read");
+  assert.equal(r.classification, "http.private-write");
   assert.equal(r.decision, "allow");
+});
+
+test("F07: hostname-prefix lookalikes are parsed as public hosts", () => {
+  for (const url of [
+    "http://localhost.evil.com/x",
+    "http://127.0.0.1.evil.com/x",
+    "http://10.evil.com/x",
+    "http://user@localhost@evil.com/x",
+    "http://evil.com/?q=localhost",
+    "http://evil.com/localhost",
+  ]) {
+    const r = classifyToolCall("http_request", { method: "POST", url });
+    assert.equal(r.classification, "http.public-write", url);
+    assert.equal(r.decision, "approval", url);
+  }
+});
+
+test("F07: full IP literals and .localhost subdomains are private", () => {
+  for (const url of [
+    "http://127.0.0.1:3000/x",
+    "http://[::1]:3000/x",
+    "http://10.1.2.3/x",
+    "http://172.20.0.1/x",
+    "http://192.168.1.1/x",
+    "http://169.254.169.254/latest/meta-data",
+    "http://app.localhost/x",
+  ]) {
+    const write = classifyToolCall("http_request", { method: "PUT", url });
+    assert.equal(write.classification, "http.private-write", url);
+    const read = classifyToolCall("http_request", { method: "GET", url });
+    assert.equal(read.classification, "http.read", url);
+  }
+  const publicIp = classifyToolCall("http_request", {
+    method: "DELETE",
+    url: "http://8.8.8.8/x",
+  });
+  assert.equal(publicIp.classification, "http.public-write");
+});
+
+test("F07: unparseable URLs are treated as public (writes need approval)", () => {
+  const r = classifyToolCall("http_request", {
+    method: "POST",
+    url: "not a url localhost",
+  });
+  assert.equal(r.classification, "http.public-write");
+  assert.equal(r.decision, "approval");
+});
+
+test("F06: Windows separators hit protected-path rules", () => {
+  const r = classifyToolCall("filesystem_write", {
+    path: "C:\\Users\\me\\.ssh\\id_rsa",
+  });
+  assert.equal(r.classification, "fs.write.protected");
+  const d = classifyToolCall("filesystem_delete", { path: "..\\..\\.ssh\\known_hosts" });
+  assert.equal(d.classification, "fs.delete.protected");
+});
+
+test("F06: containment resolver drives external write/delete classes", () => {
+  const containment = (p: string) =>
+    p.startsWith("inside/") ? "inside" : p.startsWith("weird/") ? "unknown" : "outside";
+
+  const insideWrite = classifyToolCall(
+    "filesystem_write",
+    { path: "inside/notes.md" },
+    { containment },
+  );
+  assert.equal(insideWrite.classification, "fs.write.workspace");
+  assert.equal(insideWrite.decision, "allow");
+
+  const outsideWrite = classifyToolCall(
+    "filesystem_write",
+    { path: "elsewhere/notes.md" },
+    { containment },
+  );
+  assert.equal(outsideWrite.classification, "fs.write.external");
+  assert.equal(outsideWrite.decision, "approval");
+
+  const unknownWrite = classifyToolCall(
+    "filesystem_write",
+    { path: "weird/notes.md" },
+    { containment },
+  );
+  assert.equal(unknownWrite.classification, "fs.write.external");
+
+  const outsideDelete = classifyToolCall(
+    "filesystem_delete",
+    { path: "elsewhere/notes.md" },
+    { containment },
+  );
+  assert.equal(outsideDelete.classification, "fs.delete.external");
+  assert.equal(outsideDelete.decision, "approval");
+
+  const insideDelete = classifyToolCall(
+    "filesystem_delete",
+    { path: "inside/notes.md" },
+    { containment },
+  );
+  assert.equal(insideDelete.classification, "fs.delete.workspace");
+
+  // Shell deletes consult the same resolver for every path argument.
+  const shellOutside = classifyToolCall(
+    "shell_exec",
+    { command: "rm -rf inside/a elsewhere/b" },
+    { containment },
+  );
+  assert.equal(shellOutside.classification, "fs.delete.external");
+  const shellInside = classifyToolCall(
+    "shell_exec",
+    { command: "rm -rf inside/a" },
+    { containment },
+  );
+  assert.equal(shellInside.classification, "fs.delete.workspace");
+});
+
+test("F06: protected paths beat containment (block on delete)", () => {
+  const r = classifyToolCall(
+    "filesystem_delete",
+    { path: "inside/.env" },
+    { containment: () => "inside" },
+  );
+  assert.equal(r.classification, "fs.delete.protected");
+  assert.equal(r.decision, "block");
 });
 
 test("read on .openclaw/workspace is fs.read.benign -> allow", () => {

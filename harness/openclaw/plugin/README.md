@@ -79,7 +79,9 @@ Set these under `plugins.entries.openclaw-fpp-plugin.config` in your OpenClaw co
   "blockOn": ["fs.delete.protected", "exec.cred-exfil", "gateway.restart"],
   "approvalOn": [
     "fs.delete.workspace",
+    "fs.delete.external",
     "fs.write.protected",
+    "fs.write.external",
     "pkg.install",
     "pkg.publish",
     "http.public-write",
@@ -87,6 +89,7 @@ Set these under `plugins.entries.openclaw-fpp-plugin.config` in your OpenClaw co
     "exec.system-modify",
     "gateway.config-change",
     "message.external",
+    "code.patch",
     "unknown.unclassified"
   ],
   "approvalTimeoutMs": 60000,
@@ -97,15 +100,9 @@ Set these under `plugins.entries.openclaw-fpp-plugin.config` in your OpenClaw co
 }
 ```
 
-All fields are optional; the values above are the runtime defaults from `src/config.ts` (`DEFAULT_CONFIG`). The defaults are designed to never block routine, low-risk work — only the genuinely irreversible-or-exfiltrative shapes.
+All fields are optional; the values above are the runtime defaults from `src/config.ts` (`DEFAULT_CONFIG`). The defaults are designed to never block routine, low-risk work — only the genuinely irreversible-or-exfiltrative shapes. The manifest (`openclaw.plugin.json`) defaults are kept in parity with `DEFAULT_CONFIG` by `src/config.test.ts`.
 
-> **Known drift:** the manifest (`openclaw.plugin.json`) declares a shorter
-> `approvalOn` default (`fs.delete.workspace`, `pkg.install`,
-> `http.public-write` — 3 entries) than `src/config.ts` (9 entries, above).
-> The runtime merges your config against `src/config.ts`, so **the 9-entry set
-> is what actually applies** when you set nothing. The manifest default is
-> display metadata only; this drift is tracked for correction in a future
-> release.
+Writes and deletes whose resolved target lies **outside** `workspaceRoot` (after `~`, symlink, and Windows-separator normalization) classify as `fs.write.external` / `fs.delete.external` and require approval by default; they are never treated as workspace-scoped. State-changing HTTP calls to loopback or private-network hosts classify as `http.private-write` (allowed by default, still audited) rather than being downgraded to a read.
 
 To tune, edit your OpenClaw config and restart the gateway (`openclaw gateway restart`). **Manifest schema changes (`openclaw.plugin.json`) require a full process restart** — hot reload does not refresh the cached config schema. Prefer restart over reload after adding fields such as `outOfWorkspacePaths`.
 

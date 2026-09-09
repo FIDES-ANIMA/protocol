@@ -46,7 +46,9 @@ describe("fpp_emergency_override_submit", () => {
     "hex",
   );
 
-  function makeDeps(): EmergencyOverrideSubmitDependencies & {
+  function makeDeps(
+    opts: { bindAlice?: boolean } = {},
+  ): EmergencyOverrideSubmitDependencies & {
     identity: ReturnType<typeof loadOrCreateIdentity>;
     signCalls: { count: number };
   } {
@@ -63,6 +65,10 @@ describe("fpp_emergency_override_submit", () => {
       identity: wrapped,
       stewardEligibleIds: ["steward:alice"],
       emergencyOverrideStorePath: join(ws.path, "fpp-emergency-overrides.json"),
+      // Opaque steward IDs must be bound to their signing key (audit F01);
+      // in production this comes from the trust graph.
+      stewardKeyBindings:
+        opts.bindAlice === false ? {} : { "steward:alice": [stewardPublicKey] },
       signCalls,
     };
   }
@@ -132,6 +138,38 @@ describe("fpp_emergency_override_submit", () => {
     assert.equal(details.ok, false);
     assert.equal(details.reason, "signature-invalid");
     assert.equal(deps.signCalls.count, 0);
+  });
+
+  it("rejects an allowlisted issuer whose signing key is not bound (F01)", () => {
+    const deps = makeDeps({ bindAlice: false });
+    const override = signOverride(
+      { ...base, overrideId: "e-submit-unbound" },
+      stewardSeed,
+    );
+    const result = executeEmergencyOverrideSubmit(
+      { signedJson: JSON.stringify(override) },
+      deps,
+    );
+    const details = result.details as { ok?: boolean; reason?: string };
+    assert.equal(details.ok, false);
+    assert.equal(details.reason, "issuer-key-unbound");
+    assert.equal(deps.signCalls.count, 0);
+  });
+
+  it("rejects an allowlisted issuer signed by a key bound to someone else (F01)", () => {
+    const deps = makeDeps();
+    const otherSeed = ed.utils.randomPrivateKey();
+    const override = signOverride(
+      { ...base, overrideId: "e-submit-wrongkey" },
+      otherSeed,
+    );
+    const result = executeEmergencyOverrideSubmit(
+      { signedJson: JSON.stringify(override) },
+      deps,
+    );
+    const details = result.details as { ok?: boolean; reason?: string };
+    assert.equal(details.ok, false);
+    assert.equal(details.reason, "issuer-key-unbound");
   });
 
   it("rejects issuer not in quorumStewardEligibleIds", () => {

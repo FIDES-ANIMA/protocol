@@ -90,10 +90,12 @@ export function computeEffectiveConfigHash(config: FppPluginConfig): string {
       standingAllowOn: [...config.standingAllowOn].sort(),
       mandateDefaultMaxActions: config.mandateDefaultMaxActions,
       stagedUndoWindowMs: config.stagedUndoWindowMs,
+      stagedRecoveryMaxBytes: config.stagedRecoveryMaxBytes,
       // intentionally omit: auditLogPath, receiptLogPath, identityKeyPath,
       // mandateStorePath, strictModeStatePath, stewardAuthorizationLedgerPath,
-      // constitutionHash (bound separately). outOfWorkspacePaths is included
-      // above because it changes authorization matching behavior.
+      // receiptPendingStorePath, constitutionHash (bound separately).
+      // outOfWorkspacePaths is included above because it changes
+      // authorization matching behavior.
     },
   });
 }

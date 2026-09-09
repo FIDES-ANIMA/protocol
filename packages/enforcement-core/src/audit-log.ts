@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { hashEntryV1 as hashEntry } from "@fides-anima/fpp-protocol-core";
+import { withFileLock } from "./file-lock.js";
 
 const ZERO = "0".repeat(64);
 
@@ -80,6 +81,11 @@ export type EnforcementOutcome =
   | "cancelled"
   | "allowed";
 
+/**
+ * Append a hash-chained enforcement entry. The tail read and the append run
+ * under a cross-process lock so concurrent hook processes cannot fork the
+ * chain by both reading the same `previousHash`.
+ */
 export function appendEnforcementEntry(
   logPath: string,
   event: EnforcementEvent,
@@ -87,6 +93,16 @@ export function appendEnforcementEntry(
 ): { hash: string; previousHash: string } {
   const resolved = resolve(logPath);
   mkdirSync(dirname(resolved), { recursive: true });
+  return withFileLock(resolved, () =>
+    appendEnforcementEntryLocked(resolved, event, outcome),
+  );
+}
+
+function appendEnforcementEntryLocked(
+  resolved: string,
+  event: EnforcementEvent,
+  outcome: EnforcementOutcome,
+): { hash: string; previousHash: string } {
   const previousHash = readPreviousHash(resolved);
 
   const entry: Record<string, unknown> = {

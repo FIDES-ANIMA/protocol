@@ -31,7 +31,36 @@ export {
   type StewardCoverageLookup,
 } from "./steward-coverage.js";
 
-export { isReversibleClassification } from "./reversibility.js";
+export {
+  isReversibleClassification,
+  requiresRecoveryProof,
+} from "./reversibility.js";
+
+export {
+  createWorkspaceTrashRecovery,
+  measureTreeBytes,
+  type RecoveryProof,
+  type RecoveryProvider,
+  type RecoveryRequest,
+  type WorkspaceTrashRecoveryOptions,
+} from "./recovery.js";
+
+export {
+  createWorkspaceContainmentResolver,
+  normalizePathSeparators,
+  realpathDeep,
+  type ContainmentResolver,
+  type ContainmentVerdict,
+  type WorkspaceContainmentOptions,
+} from "./workspace-containment.js";
+
+export {
+  FileLockTimeoutError,
+  lockPathFor,
+  withFileLock,
+  writeFileAtomic,
+  type FileLockOptions,
+} from "./file-lock.js";
 
 export {
   DEFAULT_CONFIG,
@@ -68,6 +97,7 @@ export {
 
 export {
   EmergencyOverrideStore,
+  isIssuerKeyBound,
   type AdmitOptions,
   type AdmitResult,
   type EmergencyCoverageResult,
@@ -76,6 +106,7 @@ export {
   type EmergencyOverrideStoreFile,
   type EmergencyOverrideStoreOptions,
   type FindEmergencyCoverageOptions,
+  type StewardKeyBindings,
 } from "./emergency-override-store.js";
 
 export {
@@ -117,7 +148,12 @@ export {
   type ReceiptMerkleProof,
 } from "./receipt-log.js";
 
-export { StagedActionLedger } from "./staged-actions.js";
+export {
+  StagedActionLedger,
+  type RegisterStagedInput,
+  type StagedActionRecord,
+  type StagedActionStatus,
+} from "./staged-actions.js";
 export { EmergencyReviewLedger } from "./emergency-review.js";
 
 export {

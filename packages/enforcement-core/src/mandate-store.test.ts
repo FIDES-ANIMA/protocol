@@ -198,7 +198,7 @@ describe("MandateStore", () => {
     assert.ok(reloaded.findCoverage("pkg.install", { nowMs }));
   });
 
-  it("over-budget via ledger returns null; unlimited ledger still covers", () => {
+  it("over-budget via ledger returns null; maxActions-only seeds from signed ceiling", () => {
     const storePath = join(ws.path, "mandates-ledger-budget.json");
     const store = new MandateStore(storePath);
     const budgeted = signMandate(
@@ -213,20 +213,87 @@ describe("MandateStore", () => {
     assert.equal(store.debit("m-ledger-budget"), true);
     assert.equal(store.findCoverage("pkg.install", { nowMs }), null);
 
-    const unlimited = signMandate(
+    const ceilingOnly = signMandate(
       {
         ...baseMandate,
-        mandateId: "m-unlimited",
+        mandateId: "m-ceiling-only",
         budgets: { maxActions: 10 },
       },
       seed,
     );
-    // Seed a store that already has exhausted budgeted mandate.
-    store.put(unlimited);
+    // F03: a signed ceiling without remainingActions is finite — never unlimited.
+    store.put(ceilingOnly);
     assert.ok(store.findCoverage("pkg.install", { nowMs }));
-    assert.equal(store.getRemaining("m-unlimited"), null);
-    assert.equal(store.debit("m-unlimited"), true);
+    assert.equal(store.getRemaining("m-ceiling-only"), 10);
+    assert.equal(store.debit("m-ceiling-only"), true);
+    assert.equal(store.getRemaining("m-ceiling-only"), 9);
     assert.ok(store.findCoverage("pkg.install", { nowMs }));
+  });
+
+  it("clamps imported remainingActions to the signed maxActions (F03)", () => {
+    const storePath = join(ws.path, "mandates-clamp.json");
+    const store = new MandateStore(storePath);
+    const inflated = signMandate(
+      {
+        ...baseMandate,
+        mandateId: "m-inflated",
+        budgets: { maxActions: 2, remainingActions: 500 },
+      },
+      seed,
+    );
+    store.put(inflated);
+    assert.equal(store.getRemaining("m-inflated"), 2);
+    assert.equal(store.debit("m-inflated"), true);
+    assert.equal(store.debit("m-inflated"), true);
+    assert.equal(store.debit("m-inflated"), false);
+    assert.equal(store.findCoverage("pkg.install", { nowMs }), null);
+  });
+
+  it("budget-less mandates fall back to mandateDefaultMaxActions (F03)", () => {
+    const storePath = join(ws.path, "mandates-default-budget.json");
+    const store = new MandateStore(storePath, { mandateDefaultMaxActions: 1 });
+    const noBudget = signMandate(
+      { ...baseMandate, mandateId: "m-nobudget", budgets: {} },
+      seed,
+    );
+    store.put(noBudget);
+    assert.equal(store.getRemaining("m-nobudget"), 1);
+    assert.equal(store.debit("m-nobudget"), true);
+    assert.equal(store.debit("m-nobudget"), false);
+  });
+
+  it("re-putting a mandate is idempotent and preserves budget + revocation (F04)", () => {
+    const storePath = join(ws.path, "mandates-replay.json");
+    const store = new MandateStore(storePath);
+    const mandate = signMandate(
+      {
+        ...baseMandate,
+        mandateId: "m-replay",
+        budgets: { maxActions: 3, remainingActions: 3 },
+      },
+      seed,
+    );
+    assert.equal(store.put(mandate).idempotent, false);
+    assert.equal(store.debit("m-replay"), true);
+    assert.equal(store.getRemaining("m-replay"), 2);
+
+    assert.equal(store.put(mandate).idempotent, true);
+    assert.equal(store.getRemaining("m-replay"), 2, "budget must not reseed");
+
+    assert.equal(store.revoke("m-replay"), true);
+    store.put(mandate);
+    assert.equal(store.findCoverage("pkg.install", { nowMs }), null);
+
+    const conflicting = signMandate(
+      {
+        ...baseMandate,
+        mandateId: "m-replay",
+        budgets: { maxActions: 99, remainingActions: 99 },
+      },
+      seed,
+    );
+    assert.throws(() => store.put(conflicting), /different signed content/);
+    assert.equal(store.getRemaining("m-replay"), 2);
   });
 
   it("revoke via ledger nulls coverage while signed blob still verifies", () => {

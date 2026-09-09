@@ -104,10 +104,23 @@ export type FppPluginConfig = {
   /** Undo/review window for allow-staged decisions (ms). */
   stagedUndoWindowMs: number;
   /**
+   * Upper bound (bytes) on adapter-proven recovery snapshots for destructive
+   * staged-allow decisions. Deletes whose recovery would exceed this bound are
+   * not reversible and cannot take the unattended staged path.
+   */
+  stagedRecoveryMaxBytes: number;
+  /**
    * Hash-chained steward authorization ledger path. Absence means no
    * OpenPGP operator coverage is available.
    */
   stewardAuthorizationLedgerPath: string;
+  /**
+   * Optional durable pending-receipt store. Required for harnesses whose
+   * pre/post hooks run in separate short-lived processes (Cursor, Claude
+   * Code, Codex) so the post hook can finalize the pre hook's receipt.
+   * `null` keeps receipts in-memory (single long-lived runtime).
+   */
+  receiptPendingStorePath: string | null;
 };
 
 export type MergeConfigResult = {
@@ -120,7 +133,9 @@ export const DEFAULT_CONFIG: FppPluginConfig = {
   blockOn: ["fs.delete.protected", "exec.cred-exfil", "gateway.restart"],
   approvalOn: [
     "fs.delete.workspace",
+    "fs.delete.external",
     "fs.write.protected",
+    "fs.write.external",
     "pkg.install",
     "pkg.publish",
     "http.public-write",
@@ -151,9 +166,11 @@ export const DEFAULT_CONFIG: FppPluginConfig = {
   mandateStorePath: workspaceFile("fpp-mandates.json"),
   mandateDefaultMaxActions: 10,
   stagedUndoWindowMs: 60_000,
+  stagedRecoveryMaxBytes: 64 * 1024 * 1024,
   stewardAuthorizationLedgerPath: workspaceFile(
     "fpp-steward-authorization-ledger.jsonl",
   ),
+  receiptPendingStorePath: null,
 };
 
 function isBlockDowngrade(blockOn: ClassificationId[]): boolean {
@@ -348,10 +365,21 @@ export function mergeConfigWithDiagnostics(input: unknown): MergeConfigResult {
       partial.mandateDefaultMaxActions ?? DEFAULT_CONFIG.mandateDefaultMaxActions,
     stagedUndoWindowMs:
       partial.stagedUndoWindowMs ?? DEFAULT_CONFIG.stagedUndoWindowMs,
+    stagedRecoveryMaxBytes:
+      typeof partial.stagedRecoveryMaxBytes === "number" &&
+      Number.isFinite(partial.stagedRecoveryMaxBytes) &&
+      partial.stagedRecoveryMaxBytes >= 0
+        ? partial.stagedRecoveryMaxBytes
+        : DEFAULT_CONFIG.stagedRecoveryMaxBytes,
     stewardAuthorizationLedgerPath: absolutizeWorkspacePath(
       partial.stewardAuthorizationLedgerPath ??
         DEFAULT_CONFIG.stewardAuthorizationLedgerPath,
     ),
+    receiptPendingStorePath:
+      typeof partial.receiptPendingStorePath === "string" &&
+      partial.receiptPendingStorePath.trim() !== ""
+        ? absolutizeWorkspacePath(partial.receiptPendingStorePath)
+        : null,
   };
 
   const unattendedDiag = unattendedApprovalWithoutStandingAllow(
