@@ -105,6 +105,21 @@ above. It requires a clean Git tree, the verified `fa-steward` identity,
 `https://registry.npmjs.org/` registry, absent exact versions, `npm ci`, the
 full verification gate, and all ten dry-runs.
 
+Store the granular npm token in the ignored repository-root `.env`:
+
+```dotenv
+NPM_TOKEN=npm_replace_with_the_granular_token
+```
+
+The token needs read/write access to the `fides-anima` scope and **Bypass 2FA**
+enabled when the account does not use publishing 2FA. Limit it to the required
+packages/scope, choose the shortest practical expiration, and revoke it after
+the release. The script reads only `NPM_TOKEN`, sends it over stdin to the npm
+launcher, and injects it only into authenticated npm commands. Verification
+uses a token-free npm config, and live publish disables lifecycle scripts. No
+temporary token file or token-bearing command argument is created. Do not
+commit `.env`.
+
 After committing the release changes, run the non-publishing preflight:
 
 ```bash

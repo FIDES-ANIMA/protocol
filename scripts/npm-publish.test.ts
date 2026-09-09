@@ -61,6 +61,16 @@ esac
     join(bin, "npm"),
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ -n "\${NPM_TOKEN:-}" || -n "\${NODE_AUTH_TOKEN:-}" ]]; then
+  echo "raw token environment leaked" >&2
+  exit 96
+fi
+if [[ "$1" != "whoami" && "$1" != "org" && "$1" != "publish" ]]; then
+  if env | cut -d= -f1 | grep -Eqi '^(npm_config.*(auth|password|username|otp|cert|key)|npm.?token|node.?auth.?token)'; then
+    echo "credential-shaped environment leaked to public npm" >&2
+    exit 95
+  fi
+fi
 printf 'npm %s\\n' "$*" >> "$CALL_LOG"
 if [[ "$1" == "config" && "$2" == "get" && "$3" == "registry" ]]; then
   if [[ "$SCENARIO" == "registry-mismatch" ]]; then
@@ -119,6 +129,15 @@ exit 97
         PUBLISHED_STATE: published,
         SCENARIO: scenario,
         FPP_NPM_PUBLISH: publishGate,
+        NPM_TOKEN: "npm_test_token_1234567890",
+        "npm_config_//registry.npmjs.org/:_authToken":
+          "inherited_test_secret",
+        NPM_CONFIG__AUTH: "inherited_basic_auth",
+        "npm_config_//registry.npmjs.org/:_password":
+          "inherited_password",
+        NPM_CONFIG_OTP: "123456",
+        FPP_NPM_TEST_COMMAND: "bash",
+        FPP_NPM_TEST_SCRIPT: join(bin, "npm"),
       },
     });
     return {
@@ -160,6 +179,12 @@ describe("guarded live npm publisher", () => {
   it("runs every preflight gate without publishing", () => {
     const result = runWithFakeCommands(["--preflight-only"]);
     assert.equal(result.status, 0, result.output);
+    assert.doesNotMatch(result.output, /npm_test_token_1234567890/);
+    assert.doesNotMatch(result.output, /inherited_test_secret/);
+    assert.equal(
+      result.calls.some((call) => call.includes("npm_test_token_1234567890")),
+      false,
+    );
     assert.ok(result.calls.includes("npm ci"));
     assert.ok(result.calls.includes("npm run verify:all"));
     assert.ok(result.calls.includes("npm run publish:npm:dry"));
@@ -275,7 +300,10 @@ describe("guarded live npm publisher", () => {
     assert.match(source, /npm ci/);
     assert.match(source, /npm run verify:all/);
     assert.match(source, /npm run publish:npm:dry/);
-    assert.match(source, /npm publish --access public --registry/);
+    assert.match(
+      source,
+      /authenticated_npm publish --ignore-scripts --access public/,
+    );
     assert.match(source, /verify_published_version/);
     assert.doesNotMatch(source, /clawhub .*publish/);
   });

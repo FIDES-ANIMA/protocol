@@ -12,6 +12,7 @@ harness/*/adapter/node_modules/
 packages/*/dist/
 packages/*/node_modules/
 packages/*/coverage/
+.env
 
 # Runtime audit logs (per-agent; not committed)
 .openclaw/

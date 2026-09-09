@@ -8,6 +8,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 REGISTRY="https://registry.npmjs.org/"
+PUBLIC_NPM_CONFIG="$SCRIPT_DIR/npm-public.npmrc"
+PUBLIC_NPM_LAUNCHER="$SCRIPT_DIR/npm-public.mjs"
+TOKEN_AUTH_LAUNCHER="$SCRIPT_DIR/npm-token-auth.mjs"
 cd "$ROOT"
 
 package_dirs=(
@@ -58,7 +61,8 @@ Options:
 
 The live mode requires a clean Git tree, the verified fa-steward npm identity,
 owner access to the fides-anima organization, successful verify:all and npm
-publish dry-runs, and exact-version registry checks.
+publish dry-runs, and exact-version registry checks. Set NPM_TOKEN in the
+ignored repository-root .env file or export it before running this command.
 USAGE
 }
 
@@ -101,6 +105,48 @@ if [[ "$mode" == "live" && "${FPP_NPM_PUBLISH:-}" != "YES" ]]; then
   die "Live publish requires FPP_NPM_PUBLISH=YES"
 fi
 
+load_npm_token() {
+  if [[ -z "${NPM_TOKEN:-}" ]]; then
+    [[ -f "$ROOT/.env" ]] \
+      || die "NPM_TOKEN is not exported and ${ROOT}/.env does not exist"
+    NPM_TOKEN="$(
+      node -e "
+        const fs = require('fs');
+        const lines = fs.readFileSync(process.argv[1], 'utf8').split(/\\r?\\n/);
+        const line = lines.find((entry) =>
+          /^(?:export[ \\t]+)?NPM_TOKEN[ \\t]*=/.test(entry.trim())
+        );
+        if (!line) process.exit(2);
+        let value = line.slice(line.indexOf('=') + 1).trim();
+        if (
+          value.length >= 2 &&
+          ((value.startsWith('\"') && value.endsWith('\"')) ||
+            (value.startsWith(\"'\") && value.endsWith(\"'\")))
+        ) {
+          value = value.slice(1, -1);
+        }
+        process.stdout.write(value);
+      " "$ROOT/.env"
+    )" || die ".env must contain NPM_TOKEN=<granular-access-token>"
+  fi
+  [[ -n "$NPM_TOKEN" ]] || die "NPM_TOKEN in .env is empty"
+  [[ "$NPM_TOKEN" != *$'\r'* && "$NPM_TOKEN" != *$'\n'* ]] \
+    || die "NPM_TOKEN must not contain control characters"
+  [[ "$NPM_TOKEN" =~ ^npm_[A-Za-z0-9_-]{20,}$ ]] \
+    || die "NPM_TOKEN must be a granular npm token"
+  export -n NPM_TOKEN 2>/dev/null || true
+}
+
+public_npm() {
+  node "$PUBLIC_NPM_LAUNCHER" "$@"
+}
+
+authenticated_npm() {
+  printf '%s' "$NPM_TOKEN" | env -u NPM_TOKEN -u NODE_AUTH_TOKEN \
+    NPM_CONFIG_USERCONFIG="$PUBLIC_NPM_CONFIG" \
+    node "$TOKEN_AUTH_LAUNCHER" "$@"
+}
+
 require_clean_tree() {
   git diff --quiet -- || die "Working tree has unstaged changes"
   git diff --cached --quiet -- || die "Working tree has staged changes"
@@ -136,7 +182,7 @@ registry_exact_version() {
   local package_name="$1" version="$2" output status
   registry_observed=""
   set +e
-  output="$(npm view "${package_name}@${version}" version --registry "$REGISTRY" 2>&1)"
+  output="$(public_npm view "${package_name}@${version}" version --registry "$REGISTRY" 2>&1)"
   status=$?
   set -e
   if [[ $status -eq 0 ]]; then
@@ -176,19 +222,20 @@ require_internal_dependencies_published() {
   done < <(internal_dependencies "$package_dir")
 }
 
+load_npm_token
 require_clean_tree
 
-configured_registry="$(npm config get registry 2>/dev/null)" \
+configured_registry="$(public_npm config get registry 2>/dev/null)" \
   || die "Unable to read npm registry configuration"
 [[ "$configured_registry" == "$REGISTRY" ]] \
   || die "npm registry must be ${REGISTRY}, got ${configured_registry}"
 
-identity="$(npm whoami --registry "$REGISTRY" 2>/dev/null)" \
-  || die "npm authentication is required; run npm login"
+identity="$(authenticated_npm whoami --registry "$REGISTRY" 2>/dev/null)" \
+  || die "npm authentication is required; check NPM_TOKEN"
 [[ "$identity" == "fa-steward" ]] \
   || die "Expected npm identity fa-steward, got ${identity}"
 
-org_access="$(npm org ls fides-anima --registry "$REGISTRY" 2>/dev/null)" \
+org_access="$(authenticated_npm org ls fides-anima --registry "$REGISTRY" 2>/dev/null)" \
   || die "Unable to verify fides-anima organization access"
 printf '%s\n' "$org_access" \
   | grep -Eq "^${identity}[[:space:]]+-[[:space:]]+owner$" \
@@ -234,9 +281,9 @@ done
 
 printf 'Authenticated as %s (fides-anima owner).\n' "$identity"
 printf 'Running clean install and complete verification...\n'
-npm ci
-npm run verify:all
-npm run publish:npm:dry
+public_npm ci
+public_npm run verify:all
+public_npm run publish:npm:dry
 require_clean_tree
 
 if [[ "$package_selected" == "true" ]]; then
@@ -260,7 +307,8 @@ for i in "${!names[@]}"; do
   version="${versions[$i]}"
   require_internal_dependencies_published "${dirs[$i]}"
   printf '=== LIVE npm publish: %s@%s ===\n' "$name" "$version"
-  npm publish --access public --registry "$REGISTRY" -w "$name"
+  authenticated_npm publish --ignore-scripts --access public \
+    --registry "$REGISTRY" -w "$name"
   verify_published_version "$name" "$version"
   printf 'Verified on npm: %s@%s\n' "$name" "$version"
 done
