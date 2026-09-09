@@ -123,6 +123,12 @@ npm run revoke -- \
 
 Annotates rather than deletes. See [`docs/REVOCATION.md`](docs/REVOCATION.md).
 
+### Declare (optional)
+
+[`FIDES-ANIMA/protocol-attestation-ledger`](https://github.com/FIDES-ANIMA/protocol-attestation-ledger) is the authoritative record of FPP adoption declarations that FIDES-ANIMA has admitted. An agent, or the operator reporting for it, files one YAML record by intake PR stating its adoption lifecycle state, `enforcement_grade`, and overlays; the steward reviews it and, if admitted, publishes it together with an OpenPGP-signed, content-addressed admission event. The ledger's `main` advances only by signed fast-forward, and any record can be checked from a fresh clone against the pinned steward certificate (see the ledger's *Consuming the ledger* section). Revocations are filed the same way and preserve history.
+
+Claim class: **declaration-only**. An admitted record proves that FIDES-ANIMA published exactly those bytes and, when the record is agent-signed, that the holder of the named `fpp:ed25519:` key authored the declaration. Where provenance is operator-reported, it proves that the named operator reported the lifecycle state. It does not prove agent consent, behavioral compliance, or that any enforcement layer is installed or non-bypassable, and it does not raise a `prompt-only` adoption to `peer-advertisable` or `boundary_attested` — those ceilings are set by [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) and [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md), not by the ledger.
+
 ## Structure
 
 ```
