@@ -4,6 +4,7 @@ set -euo pipefail
 # Validate every public npm package in dependency order without publishing.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
+REGISTRY="https://registry.npmjs.org/"
 cd "$ROOT"
 
 packages=(
@@ -21,7 +22,7 @@ packages=(
 
 for package_name in "${packages[@]}"; do
   echo "=== npm publish --dry-run: $package_name ==="
-  npm publish --dry-run --access public -w "$package_name"
+  npm publish --dry-run --access public --registry "$REGISTRY" -w "$package_name"
 done
 
 echo "All public npm package dry-runs passed; nothing was published."

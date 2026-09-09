@@ -1,6 +1,7 @@
-# Public npm staging runbook
+# Public npm publishing runbook
 
-This runbook validates the ten public packages under the `@fides-anima` npm scope. It does not perform a live publish.
+This runbook validates and, with two explicit authorization gates, publishes
+the ten public packages under the `@fides-anima` npm scope.
 
 ## Verified package names
 
@@ -98,4 +99,34 @@ manifest names. Do not run a ClawHub publish as part of npm staging.
 
 ## Release handoff
 
-A live npm publish is intentionally outside this runbook's automated commands. After authentication, organization-access confirmation, a clean dry-run, and explicit release authorization, publish the same package versions in the order above. Never use `--force`; bump any version already present on the registry.
+The guarded publisher derives names and versions from the manifests listed
+above. It requires a clean Git tree, the verified `fa-steward` identity,
+`fides-anima` owner access, the configured and explicit
+`https://registry.npmjs.org/` registry, absent exact versions, `npm ci`, the
+full verification gate, and all ten dry-runs.
+
+After committing the release changes, run the non-publishing preflight:
+
+```bash
+npm run publish:npm -- --preflight-only
+```
+
+With explicit release authorization, run:
+
+```bash
+FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live
+```
+
+If a registry or network failure interrupts a partial release, inspect the npm
+registry first. Publish each remaining package individually, preserving the
+dependency order above:
+
+```bash
+FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live \
+  --package @fides-anima/fpp-enforcement-core
+```
+
+Single-package recovery never skips an existing version; it publishes only the
+named absent version after rerunning every verification gate. Never use
+`--force`; bump any version already present. The script verifies each package
+on npm before continuing. It does not publish or modify ClawHub packages.
