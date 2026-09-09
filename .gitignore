@@ -39,7 +39,10 @@ harness/openclaw/plugin/.nyc_output/
 harness/openclaw/plugin-trust/.nyc_output/
 
 # Local assurance artifacts (CI uploads these)
-assurance-artifacts/
+assurance-artifacts/*
+# ...except the pinned release-signing keys, which are the trust anchor for
+# release:verify and MUST be reviewed in-repo (audit F11).
+!assurance-artifacts/release-signing-keys.json
 
 # Locally-generated maintainer signing key (never commit)
 .signing-key.ed25519.local

@@ -12,13 +12,15 @@ echo ""
 echo "--- Constitution signature ---"
 npm run verify
 
-echo ""
-echo "--- Classifier self-test ---"
-npm run self-test
-
+# The self-test imports the built enforcement-core dist, so the cores must be
+# built first — otherwise a clean checkout fails here (audit F15).
 echo ""
 echo "--- Build library cores (protocol → enforcement → trust) ---"
 npm run build:core
+
+echo ""
+echo "--- Classifier self-test ---"
+npm run self-test
 
 echo ""
 echo "--- Typecheck (cores + plugin + plugin-trust) ---"

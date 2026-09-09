@@ -6,11 +6,22 @@ This document describes pre-release package checks for the Freedom Preserving Pr
 
 Release manifests bind source commit, package hash, lockfile hash, test-corpus hash, constitution hash, dependencies, and supported runtime. They are signed in the **release** signing domain — distinct from constitution-root and agent-identity keys (`docs/governance/KEY_GOVERNANCE.md`).
 
+Verification is **anchored**, not self-consistent (audit F11):
+
+1. The signer must be one of the independently pinned public keys in `assurance-artifacts/release-signing-keys.json`. The `publicKeyPem` embedded in a manifest only selects a pinned key; the signature is checked against the pinned copy. An empty or missing pin file fails closed.
+2. Every provenance field — `sourceCommit`, `packageName`, `packageVersion`, `packageHash` (sha256 over the package's git-tracked files), `lockfileHash`, `testCorpusHash`, `supportedRuntime` (`engines.node`), `dependenciesHash` — is recomputed from the current checkout and must match.
+
 ```bash
-npm run release:verify -- --manifest assurance-artifacts/release-manifest.json
+# Generate (dedicated release key; its public half must be pinned first)
+npm run release:manifest -- --package harness/openclaw/plugin --key /secure/release-key.pem
+
+# Verify against pinned keys + this checkout (what the publish gate runs)
+npm run release:verify -- --manifest assurance-artifacts/release-manifest.json --package harness/openclaw/plugin
 ```
 
-Publish (`harness/openclaw/scripts/clawhub-publish.sh`) should refuse an invalid or missing signed manifest when one is required for the release channel. Offline root custody, rotation, and revocation prerequisites follow Plan 5 key governance; do not automate release signing until those controls are met.
+`--self-attested` / `--no-expectations` exist for local inspection only and print a warning; the publish gate never uses them.
+
+`harness/openclaw/scripts/clawhub-publish.sh` refuses to publish the enforcement plugin unless the manifest passes anchored verification. A missing manifest is a hard failure unless the operator sets `FPP_ALLOW_UNSIGNED_RELEASE=1` (explicit, logged opt-out). Offline root custody, rotation, and revocation prerequisites follow Plan 5 key governance; pinned keys carry optional `validFrom` / `validTo` / `revoked` fields for rotation.
 
 ## Canonical commands
 
@@ -20,7 +31,8 @@ Publish (`harness/openclaw/scripts/clawhub-publish.sh`) should refuse an invalid
 | `npm run assurance:packages` | Deterministic inventories + CycloneDX SBOMs (no publish) |
 | `bash scripts/verify-pack.sh` | Builds cores first, confirms exact core pins, pack contents, and true isolated OpenClaw-flag installs of plugin tarballs alone (no side-loaded core tarballs; cores embedded via `bundledDependencies`) |
 | `npm run publish:npm:dry` | Runs npm's public-package prepack and publish validation for all ten packages without publishing |
-| `npm run release:verify` | Verify a signed release manifest |
+| `npm run release:manifest` | Compute checkout provenance and sign a release manifest with a dedicated release key |
+| `npm run release:verify` | Verify a signed release manifest against pinned keys and the current checkout |
 
 ## Release order
 

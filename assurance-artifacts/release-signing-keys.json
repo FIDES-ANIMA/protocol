@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "_note": "Independently pinned release-signing public keys (audit F11). `npm run release:verify` only accepts manifests signed by a key listed here; the publicKeyPem embedded in a manifest is never trusted on its own. Keys must be dedicated release keys held under the custody rules in docs/KEY_GOVERNANCE.md — never the constitution root or an agent identity key. Pin a key by adding { keyId, publicKeyPem, validFrom?, validTo?, revoked? }. An empty list fails closed.",
+  "keys": []
+}

@@ -32,6 +32,32 @@ bold()   { printf '\033[1m%s\033[0m\n' "$*"; }
 
 die() { red "ERROR: $*" >&2; exit 1; }
 
+# Anchored release-manifest gate (audit F11). The manifest must be signed by a
+# key pinned in assurance-artifacts/release-signing-keys.json and every
+# provenance field must match values computed from THIS checkout for the
+# package being published. A missing manifest is a hard failure unless the
+# operator explicitly opts out with FPP_ALLOW_UNSIGNED_RELEASE=1.
+RELEASE_MANIFEST="assurance-artifacts/release-manifest.json"
+RELEASE_KEYS="assurance-artifacts/release-signing-keys.json"
+verify_release_manifest_anchored() {
+  local pkg_dir="$1"
+  if [[ ! -f "$REPO_ROOT/$RELEASE_MANIFEST" ]]; then
+    if [[ "${FPP_ALLOW_UNSIGNED_RELEASE:-0}" == "1" ]]; then
+      yellow "  ⚠ No $RELEASE_MANIFEST — FPP_ALLOW_UNSIGNED_RELEASE=1 set, publishing WITHOUT provenance"
+      return 0
+    fi
+    die "No $RELEASE_MANIFEST. Generate one with 'npm run release:manifest -- --package $pkg_dir --key <release-key.pem>' or set FPP_ALLOW_UNSIGNED_RELEASE=1 to publish without provenance."
+  fi
+  [[ -f "$REPO_ROOT/$RELEASE_KEYS" ]] \
+    || die "No $RELEASE_KEYS — pinned release keys are required to verify $RELEASE_MANIFEST"
+  bold "Verifying signed release manifest against pinned keys + checkout (refuse invalid)..."
+  (cd "$REPO_ROOT" && npm run release:verify -- \
+      --manifest "$RELEASE_MANIFEST" \
+      --trusted-keys "$RELEASE_KEYS" \
+      --package "$pkg_dir") \
+    || { red "  ✗ Release manifest failed anchored verification — refusing publish"; exit 1; }
+}
+
 # On Windows, clawhub's internal `npm pack` spawn often fails with
 # "spawnSync npm ENOENT". Pre-pack with npm ourselves and publish the tarball.
 needs_tarball_publish() {
@@ -277,13 +303,7 @@ run_strict_checks_plugin() {
   (cd "$REPO_ROOT" && npm run build -w "$PLUGIN_NPM_NAME")
   (cd "$REPO_ROOT" && npm test -w "$PLUGIN_NPM_NAME")
   (cd "$REPO_ROOT" && SKIP_ISOLATED_INSTALL=1 bash scripts/verify-pack.sh)
-  if [[ -f "$REPO_ROOT/assurance-artifacts/release-manifest.json" ]]; then
-    bold "Verifying signed release manifest (refuse invalid)..."
-    (cd "$REPO_ROOT" && npm run release:verify -- --manifest assurance-artifacts/release-manifest.json) \
-      || { red "  ✗ Invalid release manifest — refusing publish"; exit 1; }
-  else
-    yellow "  ⚠ No assurance-artifacts/release-manifest.json — skipping release-domain check"
-  fi
+  verify_release_manifest_anchored "$PLUGIN_DIR"
   green "  ✓ Enforcement plugin checks passed"
 }
 
