@@ -12,7 +12,7 @@ import {
 } from "@fides-anima/fpp-protocol-core";
 import { createTempWorkspace, createFakeClock } from "./test-helpers.js";
 import { loadOrCreateIdentity } from "./identity.js";
-import { KeyLifecycleLedger } from "./key-lifecycle.js";
+import { KeyLifecycleLedger, applyRevocation } from "./key-lifecycle.js";
 import { parseQuorumPolicyConfig } from "./quorum-policy.js";
 import {
   QuorumSessionManager,
@@ -524,5 +524,179 @@ describe("quorum-session", () => {
     assert.notEqual(frozen!.revoked, true);
     assert.equal(afterRevoke.ledgers?.[mandateId]?.revoked, true);
     assert.equal(verifyMandateSignature(frozen!), true);
+  });
+
+  // ── Audit F02: one key must not satisfy multiple voter identities ────────
+
+  function proposalFor(
+    mgr: QuorumSessionManager,
+    proposer: ReturnType<typeof loadOrCreateIdentity>,
+    clock: ReturnType<typeof createFakeClock>,
+    proposalId: string,
+  ) {
+    const mandateDigest = computeIntendedMandateDigest({
+      scope,
+      budgets,
+      mandateValidFrom: "2026-07-10T12:00:00.000Z",
+      mandateValidTo: "2026-07-11T12:00:00.000Z",
+    });
+    const proposal = signQuorumProposal(
+      {
+        schemaVersion: 1,
+        proposalId,
+        quorumClass: "peer-quorum",
+        proposerId: proposer.agentId,
+        mandateDigest,
+        scope,
+        budgets,
+        mandateValidFrom: "2026-07-10T12:00:00.000Z",
+        mandateValidTo: "2026-07-11T12:00:00.000Z",
+        proposedAt: clock.iso(),
+        expiresAt: new Date(clock.now() + 3_600_000).toISOString(),
+      },
+      proposer,
+    );
+    assert.equal(mgr.propose(proposal).ok, true);
+    return mandateDigest;
+  }
+
+  it("F02: opaque eligible IDs cannot vote with an unbound key", () => {
+    const clock = createFakeClock(Date.parse("2026-07-10T12:00:00.000Z"));
+    const proposer = loadOrCreateIdentity("proposer.key", ws.path);
+    const voterA = loadOrCreateIdentity("voter-a.key", ws.path);
+    const policy = parseQuorumPolicyConfig({
+      peerThreshold: 2,
+      stewardThreshold: 2,
+      // Two opaque IDs on the allowlist plus the (self-certifying) proposer.
+      peerEligibleIds: [proposer.agentId, "peer:alice", "peer:bob"],
+      stewardEligibleIds: [],
+    });
+    const mgr = new QuorumSessionManager({
+      policy,
+      ledger: new KeyLifecycleLedger(),
+      mandateStorePath: join(ws.path, "mandates-f02-unbound.json"),
+      statePath: join(ws.path, "quorum-f02-unbound.json"),
+      nowMs: () => clock.now(),
+      // No bindings → opaque IDs have no trusted key.
+    });
+    const mandateDigest = proposalFor(mgr, proposer, clock, "prop-f02-unbound");
+
+    for (const claimed of ["peer:alice", "peer:bob"]) {
+      const ballot = signQuorumBallot(
+        {
+          schemaVersion: 1,
+          ballotId: `b-${claimed}`,
+          proposalId: "prop-f02-unbound",
+          voterId: claimed,
+          vote: "aye",
+          mandateDigest,
+          castAt: clock.iso(),
+        },
+        voterA,
+      );
+      const res = mgr.second(ballot);
+      assert.equal(res.ok, false);
+      assert.match(res.ok === false ? res.error : "", /not bound/);
+    }
+    assert.equal(mgr.finalize("prop-f02-unbound", proposer).ok, false);
+  });
+
+  it("F02: one bound key voting under two identities counts once", () => {
+    const clock = createFakeClock(Date.parse("2026-07-10T12:00:00.000Z"));
+    const proposer = loadOrCreateIdentity("proposer.key", ws.path);
+    const voterA = loadOrCreateIdentity("voter-a.key", ws.path);
+    const policy = parseQuorumPolicyConfig({
+      peerThreshold: 2,
+      stewardThreshold: 2,
+      peerEligibleIds: [proposer.agentId, "peer:alice", "peer:bob"],
+      stewardEligibleIds: [],
+    });
+    const mgr = new QuorumSessionManager({
+      policy,
+      ledger: new KeyLifecycleLedger(),
+      mandateStorePath: join(ws.path, "mandates-f02-dup.json"),
+      statePath: join(ws.path, "quorum-f02-dup.json"),
+      nowMs: () => clock.now(),
+      // Misconfiguration: the same key bound to both identities.
+      keyBindings: {
+        "peer:alice": voterA.publicKeyHex,
+        "peer:bob": voterA.publicKeyHex,
+      },
+    });
+    const mandateDigest = proposalFor(mgr, proposer, clock, "prop-f02-dup");
+
+    const first = mgr.second(
+      signQuorumBallot(
+        {
+          schemaVersion: 1,
+          ballotId: "b-alice",
+          proposalId: "prop-f02-dup",
+          voterId: "peer:alice",
+          vote: "aye",
+          mandateDigest,
+          castAt: clock.iso(),
+        },
+        voterA,
+      ),
+    );
+    assert.equal(first.ok, true);
+
+    const second = mgr.second(
+      signQuorumBallot(
+        {
+          schemaVersion: 1,
+          ballotId: "b-bob",
+          proposalId: "prop-f02-dup",
+          voterId: "peer:bob",
+          vote: "aye",
+          mandateDigest,
+          castAt: clock.iso(),
+        },
+        voterA,
+      ),
+    );
+    assert.equal(second.ok, false);
+    assert.match(second.ok === false ? second.error : "", /signing key already cast/);
+
+    const fin = mgr.finalize("prop-f02-dup", proposer);
+    assert.equal(fin.ok, false);
+    assert.match(fin.ok === false ? fin.error : "", /threshold/);
+  });
+
+  it("F02: a key revoked after casting is excluded at finalization", () => {
+    const { proposer, voterA, voterB, mgr, clock, mandateStorePath } = setup();
+    const ledger = (mgr as unknown as { ledger: KeyLifecycleLedger }).ledger;
+    const mandateDigest = proposalFor(mgr, proposer, clock, "prop-f02-revoke");
+    for (const [id, voter] of [["b-a", voterA], ["b-b", voterB]] as const) {
+      assert.equal(
+        mgr.second(
+          signQuorumBallot(
+            {
+              schemaVersion: 1,
+              ballotId: id,
+              proposalId: "prop-f02-revoke",
+              voterId: voter.agentId,
+              vote: "aye",
+              mandateDigest,
+              castAt: clock.iso(),
+            },
+            voter,
+          ),
+        ).ok,
+        true,
+      );
+    }
+    applyRevocation(ledger, {
+      agentId: voterB.agentId,
+      publicKeyHex: voterB.publicKeyHex,
+      reason: "compromise",
+      compromisedAtMs: clock.now() - 1,
+      signer: voterB,
+    });
+    clock.advance(1_000);
+    const fin = mgr.finalize("prop-f02-revoke", proposer);
+    assert.equal(fin.ok, false);
+    assert.match(fin.ok === false ? fin.error : "", /threshold.*revoked|revoked/);
+    assert.equal(existsSync(mandateStorePath), false);
   });
 });

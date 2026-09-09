@@ -359,6 +359,13 @@ export function createTrustStack(
     ledger: keyLifecycle,
     mandateStorePath: config.mandateStorePath,
     statePath: config.quorumStatePath,
+    // Opaque voter IDs bind to the key recorded on their trust-graph node;
+    // self-certifying IDs bind themselves (audit F02).
+    keyBindings: (voterId) => {
+      const node = trustGraph.getAgent(voterId);
+      if (!node) return undefined;
+      return node.publicKeyHex ? [node.publicKeyHex] : [];
+    },
   });
 
   return {

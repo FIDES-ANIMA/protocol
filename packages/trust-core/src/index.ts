@@ -182,9 +182,12 @@ export {
   thresholdFor,
   evaluateThreshold,
   evaluateBallotEligibility,
+  isVoterKeyBound,
+  principalOf,
   DEFAULT_QUORUM_POLICY,
 } from "./quorum-policy.js";
 export type {
+  QuorumKeyBindings,
   QuorumVoterRole,
   QuorumPolicyConfig,
   BallotEligibilityInput,

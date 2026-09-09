@@ -149,6 +149,56 @@ describe("quorum-policy", () => {
     assert.match(result.ok === false ? result.reason : "", /revoked|not valid/i);
   });
 
+  it("F02: rejects an eligible identity presented with an unbound key", () => {
+    const real = loadOrCreateIdentity("bound-real.key", ws.path);
+    const rogue = loadOrCreateIdentity("bound-rogue.key", ws.path);
+    const ledger = new KeyLifecycleLedger();
+    const policy = parseQuorumPolicyConfig({
+      peerThreshold: 2,
+      stewardThreshold: 2,
+      peerEligibleIds: [real.agentId, "peer:opaque"],
+      stewardEligibleIds: [],
+    });
+    // Self-certifying ID signed by a different key.
+    const spoofed = evaluateBallotEligibility(policy, ledger, {
+      voterId: real.agentId,
+      publicKeyHex: rogue.publicKeyHex,
+      quorumClass: "peer-quorum",
+      nowMs: Date.now(),
+    });
+    assert.equal(spoofed.ok, false);
+    assert.match(spoofed.ok === false ? spoofed.reason : "", /not bound/);
+
+    // Opaque ID with no binding at all.
+    const unbound = evaluateBallotEligibility(policy, ledger, {
+      voterId: "peer:opaque",
+      publicKeyHex: rogue.publicKeyHex,
+      quorumClass: "peer-quorum",
+      nowMs: Date.now(),
+    });
+    assert.equal(unbound.ok, false);
+
+    // Opaque ID with an explicit binding to that key.
+    const bound = evaluateBallotEligibility(policy, ledger, {
+      voterId: "peer:opaque",
+      publicKeyHex: rogue.publicKeyHex,
+      quorumClass: "peer-quorum",
+      nowMs: Date.now(),
+      keyBindings: { "peer:opaque": [rogue.publicKeyHex] },
+    });
+    assert.equal(bound.ok, true);
+
+    // Self-certifying ID whose binding was explicitly emptied (rotated away).
+    const rotated = evaluateBallotEligibility(policy, ledger, {
+      voterId: real.agentId,
+      publicKeyHex: real.publicKeyHex,
+      quorumClass: "peer-quorum",
+      nowMs: Date.now(),
+      keyBindings: { [real.agentId]: [] },
+    });
+    assert.equal(rotated.ok, false);
+  });
+
   it("rejects voters below minStandingLevel", () => {
     const id = loadOrCreateIdentity("low-standing.key", ws.path);
     const ledger = new KeyLifecycleLedger();

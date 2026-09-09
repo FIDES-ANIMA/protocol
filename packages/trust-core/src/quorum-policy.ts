@@ -5,7 +5,11 @@
  * Not constitutional ratification — local operator policy only.
  */
 
-import type { QuorumClass } from "@fides-anima/fpp-protocol-core";
+import {
+  parseAgentId,
+  publicKeyMatchesAgentId,
+  type QuorumClass,
+} from "@fides-anima/fpp-protocol-core";
 import {
   isKeyValidAt,
   type KeyLifecycleLedger,
@@ -13,6 +17,64 @@ import {
 import { TrustLevel } from "./trust-graph.js";
 
 export type QuorumVoterRole = "peer" | "steward";
+
+/**
+ * Independent voter-identity → signing-key binding (audit F02).
+ *
+ * Self-certifying `fpp:ed25519:<fingerprint>` IDs bind themselves; any other
+ * ID must resolve here (e.g. from the trust graph). An empty list means the
+ * identity is known but currently has no valid key (revoked / rotated away).
+ */
+export type QuorumKeyBindings =
+  | Readonly<Record<string, readonly string[] | string>>
+  | ((voterId: string) => readonly string[] | string | undefined);
+
+function normalizeHex(hex: string): string {
+  return hex.trim().toLowerCase();
+}
+
+function boundKeysFor(
+  bindings: QuorumKeyBindings | undefined,
+  voterId: string,
+): readonly string[] | undefined {
+  if (!bindings) return undefined;
+  const raw =
+    typeof bindings === "function" ? bindings(voterId) : bindings[voterId];
+  if (raw === undefined) return undefined;
+  return (typeof raw === "string" ? [raw] : raw).map(normalizeHex);
+}
+
+/**
+ * True when `publicKeyHex` is a trusted key for `voterId`. Legacy truncated
+ * aliases are never independent proof of identity.
+ */
+export function isVoterKeyBound(
+  voterId: string,
+  publicKeyHex: string,
+  bindings: QuorumKeyBindings | undefined,
+): boolean {
+  const key = normalizeHex(publicKeyHex);
+  const explicit = boundKeysFor(bindings, voterId);
+  if (parseAgentId(voterId).kind === "v2") {
+    let selfCertified = false;
+    try {
+      selfCertified = publicKeyMatchesAgentId(voterId, key);
+    } catch {
+      selfCertified = false;
+    }
+    if (!selfCertified) return false;
+    return explicit === undefined || explicit.includes(key);
+  }
+  return explicit !== undefined && explicit.includes(key);
+}
+
+/**
+ * The authenticated principal behind a ballot is the signing key, not the
+ * claimed voter ID. Quorum counting deduplicates on this value.
+ */
+export function principalOf(publicKeyHex: string): string {
+  return normalizeHex(publicKeyHex);
+}
 
 export type QuorumPolicyConfig = {
   /** Minimum aye votes for peer-quorum finalize. */
@@ -47,6 +109,8 @@ export type BallotEligibilityInput = {
   nowMs: number;
   /** Observed standing for the voter in the relevant capability scope. */
   standingLevel?: TrustLevel | undefined;
+  /** Identity→key bindings; omitted ⇒ only self-certifying IDs are accepted. */
+  keyBindings?: QuorumKeyBindings | undefined;
 };
 
 export type BallotEligibilityResult =
@@ -121,8 +185,9 @@ export function evaluateThreshold(
 }
 
 /**
- * Role + eligibility + optional standing + key-lifecycle validity.
- * Revoked / compromised keys are rejected.
+ * Role + eligibility + identity/key binding + optional standing +
+ * key-lifecycle validity. Revoked / compromised keys are rejected, and a key
+ * that is not bound to the claimed voter identity cannot vote under it.
  */
 export function evaluateBallotEligibility(
   policy: QuorumPolicyConfig,
@@ -131,6 +196,12 @@ export function evaluateBallotEligibility(
 ): BallotEligibilityResult {
   if (!isKeyValidAt(ledger, input.publicKeyHex, input.nowMs)) {
     return { ok: false, reason: "voter key revoked or not valid at cast time" };
+  }
+  if (!isVoterKeyBound(input.voterId, input.publicKeyHex, input.keyBindings)) {
+    return {
+      ok: false,
+      reason: `signing key is not bound to voter identity ${input.voterId}`,
+    };
   }
 
   const peers = normalizeIds(policy.peerEligibleIds);

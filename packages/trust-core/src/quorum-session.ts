@@ -34,6 +34,8 @@ import { verifySignature } from "./identity.js";
 import {
   evaluateBallotEligibility,
   evaluateThreshold,
+  principalOf,
+  type QuorumKeyBindings,
   type QuorumPolicyConfig,
 } from "./quorum-policy.js";
 import type { KeyLifecycleLedger } from "./key-lifecycle.js";
@@ -99,6 +101,11 @@ export type QuorumSessionManagerOptions = {
   standingFor?:
     | ((voterId: string) => TrustLevel | undefined)
     | undefined;
+  /**
+   * Voter/proposer identity → key bindings (audit F02). Omitted ⇒ only
+   * self-certifying `fpp:ed25519:…` identities may propose or vote.
+   */
+  keyBindings?: QuorumKeyBindings | undefined;
 };
 
 export type QuorumOpResult<T = void> =
@@ -196,6 +203,7 @@ export class QuorumSessionManager {
   private readonly standingFor?:
     | ((voterId: string) => TrustLevel | undefined)
     | undefined;
+  private readonly keyBindings: QuorumKeyBindings | undefined;
   private sessions: Record<string, QuorumSessionRecord> = {};
 
   constructor(options: QuorumSessionManagerOptions) {
@@ -206,7 +214,56 @@ export class QuorumSessionManager {
     this.statePath = resolve(base, options.statePath);
     this.nowMs = options.nowMs ?? (() => Date.now());
     this.standingFor = options.standingFor;
+    this.keyBindings = options.keyBindings;
     this.reload();
+  }
+
+  private eligibilityOf(
+    voterId: string,
+    publicKeyHex: string,
+    quorumClass: QuorumProposalV1["quorumClass"],
+  ) {
+    return evaluateBallotEligibility(this.policy, this.ledger, {
+      voterId,
+      publicKeyHex,
+      quorumClass,
+      nowMs: this.nowMs(),
+      standingLevel: this.standingFor?.(voterId),
+      keyBindings: this.keyBindings,
+    });
+  }
+
+  /**
+   * Aye ballots whose principal (signing key) is distinct and still eligible
+   * *now*. Re-evaluated at finalization so a key revoked after casting, or two
+   * claimed identities backed by one key, cannot carry a quorum.
+   */
+  private countEligibleAyes(session: QuorumSessionRecord): {
+    ayeCount: number;
+    rejected: string[];
+  } {
+    const seen = new Set<string>();
+    const rejected: string[] = [];
+    let ayeCount = 0;
+    for (const ballot of session.ballots) {
+      const principal = principalOf(ballot.publicKey);
+      if (seen.has(principal)) {
+        rejected.push(`${ballot.ballotId}: duplicate principal`);
+        continue;
+      }
+      seen.add(principal);
+      const eligibility = this.eligibilityOf(
+        ballot.voterId,
+        ballot.publicKey,
+        session.proposal.quorumClass,
+      );
+      if (!eligibility.ok) {
+        rejected.push(`${ballot.ballotId}: ${eligibility.reason}`);
+        continue;
+      }
+      if (ballot.vote === "aye") ayeCount += 1;
+    }
+    return { ayeCount, rejected };
   }
 
   reload(): void {
@@ -274,13 +331,11 @@ export class QuorumSessionManager {
       return { ok: false, error: "proposal mandateDigest does not match scope/budgets" };
     }
 
-    const eligibility = evaluateBallotEligibility(this.policy, this.ledger, {
-      voterId: parsed.proposal.proposerId,
-      publicKeyHex: parsed.proposal.publicKey,
-      quorumClass: parsed.proposal.quorumClass,
-      nowMs: this.nowMs(),
-      standingLevel: this.standingFor?.(parsed.proposal.proposerId),
-    });
+    const eligibility = this.eligibilityOf(
+      parsed.proposal.proposerId,
+      parsed.proposal.publicKey,
+      parsed.proposal.quorumClass,
+    );
     if (!eligibility.ok) {
       return { ok: false, error: `proposer ineligible: ${eligibility.reason}` };
     }
@@ -328,13 +383,11 @@ export class QuorumSessionManager {
     const match = validateBallotAgainstProposal(parsed.ballot, session.proposal);
     if (!match.ok) return { ok: false, error: match.error };
 
-    const eligibility = evaluateBallotEligibility(this.policy, this.ledger, {
-      voterId: parsed.ballot.voterId,
-      publicKeyHex: parsed.ballot.publicKey,
-      quorumClass: session.proposal.quorumClass,
-      nowMs: this.nowMs(),
-      standingLevel: this.standingFor?.(parsed.ballot.voterId),
-    });
+    const eligibility = this.eligibilityOf(
+      parsed.ballot.voterId,
+      parsed.ballot.publicKey,
+      session.proposal.quorumClass,
+    );
     if (!eligibility.ok) {
       return { ok: false, error: eligibility.reason };
     }
@@ -345,13 +398,21 @@ export class QuorumSessionManager {
     if (session.ballots.some((b) => b.voterId === parsed.ballot.voterId)) {
       return { ok: false, error: "voter already cast a ballot on this proposal" };
     }
+    // One authenticated principal (signing key) counts once, regardless of
+    // how many eligible identities it claims (audit F02).
+    const principal = principalOf(parsed.ballot.publicKey);
+    if (session.ballots.some((b) => principalOf(b.publicKey) === principal)) {
+      return {
+        ok: false,
+        error: "signing key already cast a ballot on this proposal under another voter identity",
+      };
+    }
 
     session.ballots.push(parsed.ballot);
     this.sessions[session.proposal.proposalId] = session;
     this.persist();
 
-    const ayeCount = session.ballots.filter((b) => b.vote === "aye").length;
-    return { ok: true, ayeCount };
+    return { ok: true, ayeCount: this.countEligibleAyes(session).ayeCount };
   }
 
   finalize(
@@ -393,13 +454,24 @@ export class QuorumSessionManager {
       };
     }
 
-    const ayeCount = session.ballots.filter((b) => b.vote === "aye").length;
+    // Proposer lifecycle/binding is rechecked at finalization too.
+    const proposer = this.eligibilityOf(
+      session.proposal.proposerId,
+      session.proposal.publicKey,
+      session.proposal.quorumClass,
+    );
+    if (!proposer.ok) {
+      return { ok: false, error: `proposer ineligible at finalize: ${proposer.reason}` };
+    }
+
+    const { ayeCount, rejected } = this.countEligibleAyes(session);
     const threshold = evaluateThreshold(this.policy, {
       quorumClass: session.proposal.quorumClass,
       ayeCount,
     });
     if (!threshold.ok) {
-      return { ok: false, error: threshold.reason };
+      const detail = rejected.length > 0 ? ` (excluded: ${rejected.join("; ")})` : "";
+      return { ok: false, error: `${threshold.reason}${detail}` };
     }
 
     const finalizedAt = new Date(this.nowMs()).toISOString();
