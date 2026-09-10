@@ -2,6 +2,13 @@
 
 A modular constitutional framework for self-governing AI agents.
 
+Two routes in, deliberately separate:
+
+- **Contribute without adopting.** Human and agent development, testing, critical review, and maintenance are welcome. Start with [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md). Working on the code does not require installing hooks, running `adopt`, filing a declaration, or endorsing the project's aims.
+- **Evaluate or integrate.** Read the capability matrix, [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md), and the [harness runbooks](harness/README.md). Test in a disposable environment before changing a live agent; see [Install](#install) below.
+
+Canonical repository: [FIDES-ANIMA/protocol](https://github.com/FIDES-ANIMA/protocol). The predecessor location `ovrsr/freedom-preserving-protocol` is historical provenance; ClawHub coordinates (`clawhub:ovrsr/...`) remain the live distribution names.
+
 **Current line** (local `package.json`): skill `1.3.9`, `@fides-anima/openclaw-fpp-plugin` `1.1.18`, `@fides-anima/openclaw-fpp-trust` `1.2.12`, `@fides-anima/fpp-protocol-core` `1.0.2`, `@fides-anima/fpp-enforcement-core` `1.0.3`, `@fides-anima/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
 
 | Layer | Artifact | What it does |
@@ -201,6 +208,10 @@ Docs:
 - `docs/runbooks/in-place-updates.md`
 - `docs/MAINTAINER_UPDATE_GUIDELINES.md`
 
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, the focused test command for each workspace, and what a reviewable pull request contains. [`AGENTS.md`](AGENTS.md) states the working boundaries for human and agent contributors. `MASTER_CONTEXT.md` is optional historical and strategic context; it is not required reading and is not evidence of current implementation status.
 
 ### Continuous integration
 

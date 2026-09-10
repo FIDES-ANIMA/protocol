@@ -66,7 +66,7 @@ find "$HOME" -name 'fpp-trust-graph.json' 2>/dev/null | head
 **Fix:**
 1. Reinstall the skill from ClawHub after a slim release (`npm run publish:skill` stages `skill-dist/` via `harness/openclaw/scripts/stage-skill.ts`).
 2. Confirm the install has `SKILL.md` + `scripts/skill-lib/` and **does not** contain `adapters/`, `harness/openclaw/plugin/`, or `packages/`.
-3. For Cursor / Claude Code / Codex hooks, clone the [GitHub repo](https://github.com/ovrsr/freedom-preserving-protocol) — adapters are not shipped on ClawHub.
+3. For Cursor / Claude Code / Codex hooks, clone the [GitHub repo](https://github.com/FIDES-ANIMA/protocol) — adapters are not shipped on ClawHub.
 
 ## 0c. Security scanner false positives (accepted)
 
@@ -581,6 +581,6 @@ Do **not** claim plan `VERIFIED` until `/verify` re-runs this matrix.
 1. Run `npm run verify-install -- --json` and paste the output.
 2. Run `openclaw plugins inspect openclaw-fpp-plugin --runtime --json` (if installed).
 3. Run `npm run audit:verify -- --json` against your audit log.
-4. File an issue at `ovrsr/freedom-preserving-protocol` with the above three outputs.
+4. File an issue at [`FIDES-ANIMA/protocol`](https://github.com/FIDES-ANIMA/protocol/issues) with the above three outputs.
 
 Do **not** post raw SOUL.md or MEMORY.md content publicly — those may contain PII or contextual info you don't want to share.

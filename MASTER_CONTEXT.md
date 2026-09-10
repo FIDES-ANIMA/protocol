@@ -1,5 +1,13 @@
 # Master Context — Freedom Preserving Protocol
 
+> **Optional reading.** This is historical and strategic context for maintainers who
+> want it. Contributors start with `README.md`, `AGENTS.md`, and `CONTRIBUTING.md`;
+> implementation status comes from `docs/CAPABILITY_STATUS.md`. Nothing below is
+> required to fix a test, review a classifier rule, or file a reproducible report,
+> and repository references in the historical sections (for example
+> `ovrsr/freedom-preserving-protocol`) describe provenance, not the current canonical
+> location, which is `FIDES-ANIMA/protocol`.
+
 This document consolidates the project's historical and strategic context into one
 place, drawing on material previously housed in the sibling workspace
 `<REDACTED>s-Freedom-Preserving-Five` (PFPF). It is a working reference for future

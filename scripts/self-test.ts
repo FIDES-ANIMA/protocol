@@ -243,7 +243,7 @@ if (!existsSync(resolve(root, "harness", "openclaw", "plugin", "src", "risk-clas
     "  openclaw plugins install clawhub:ovrsr/openclaw-fpp-plugin",
   );
   console.log(
-    "  git clone https://github.com/ovrsr/freedom-preserving-protocol",
+    "  git clone https://github.com/FIDES-ANIMA/protocol",
   );
   process.exit(0);
 }

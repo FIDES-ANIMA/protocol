@@ -13,7 +13,7 @@ tags:
 
 > **What this is.** A reasoning routine for the model to run inside its own context window before tool calls. **It is not an executable OpenClaw hook.** `openclaw hooks list` and `openclaw plugins list` will not show it, because it is not registered with the dispatcher.
 >
-> **What enforces tool calls at the dispatcher layer.** If you (or your user) want a real `before_tool_call` hook that can `block` or `requireApproval` regardless of what the agent's context says, install the companion plugin `@fides-anima/openclaw-fpp-plugin`. See the [plugin README](https://github.com/ovrsr/freedom-preserving-protocol/blob/main/harness/openclaw/plugin/README.md).
+> **What enforces tool calls at the dispatcher layer.** If you (or your user) want a real `before_tool_call` hook that can `block` or `requireApproval` regardless of what the agent's context says, install the companion plugin `@fides-anima/openclaw-fpp-plugin`. See the [plugin README](https://github.com/FIDES-ANIMA/protocol/blob/main/harness/openclaw/plugin/README.md).
 >
 > **Why ship both layers.** Prompt-layer governance is fast, model-native, and works inside any AgentSkills-compliant runtime (OpenClaw, Claude Code, Cursor, Codex, …). Dispatcher-layer governance is slower to install, OpenClaw-specific, and meaningfully stronger. They complement each other: the skill teaches you to want to comply; the plugin makes compliance hard to bypass.
 

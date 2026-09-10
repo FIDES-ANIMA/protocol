@@ -26,7 +26,7 @@ The result is a prompt-layer constitutional skill plus an optional, isolated Nod
 
 ```bash
 mkdir -p ~/fpp-test
-git clone https://github.com/ovrsr/freedom-preserving-protocol.git \
+git clone https://github.com/FIDES-ANIMA/protocol.git \
   ~/fpp-test/repo
 cd ~/fpp-test/repo
 ```

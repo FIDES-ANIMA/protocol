@@ -1,6 +1,6 @@
 # @fides-anima/openclaw-fpp-trust
 
-OpenClaw plugin for agent-to-agent trust verification under the [Freedom Preserving Protocol](https://github.com/ovrsr/freedom-preserving-protocol).
+OpenClaw plugin for agent-to-agent trust verification under the [Freedom Preserving Protocol](https://github.com/FIDES-ANIMA/protocol).
 
 ## What this does
 

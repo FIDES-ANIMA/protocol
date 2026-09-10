@@ -165,7 +165,7 @@ Optional trust plugin:
 openclaw plugins install clawhub:ovrsr/openclaw-fpp-trust
 ```
 
-**Other harnesses (Cursor / Claude Code / Codex):** adapters are **not** in this ClawHub skill. Clone the [GitHub repository](https://github.com/ovrsr/freedom-preserving-protocol) and follow `harness/<harness>/README.md` plus that harness `runbook.md`. Do not merge hook fragments from this skill package — there are none here.
+**Other harnesses (Cursor / Claude Code / Codex):** adapters are **not** in this ClawHub skill. Clone the [GitHub repository](https://github.com/FIDES-ANIMA/protocol) and follow `harness/<harness>/README.md` plus that harness `runbook.md`. Do not merge hook fragments from this skill package — there are none here.
 
 ### Step 5: Verify the install
 

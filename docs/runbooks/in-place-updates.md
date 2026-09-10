@@ -41,13 +41,13 @@ Ownership behavior is covered by `scripts/update-installed-assets.test.ts`.
 - `npm`
 - `rsync` (preferred; the updater falls back to `cp -a` when `rsync` is unavailable — both paths use the same ownership rules)
 - `tar`
-- a clone of `https://github.com/ovrsr/freedom-preserving-protocol`
+- a clone of `https://github.com/FIDES-ANIMA/protocol`
 
 Recommended start:
 
 ```bash
 tmp="$(mktemp -d)"
-git clone https://github.com/ovrsr/freedom-preserving-protocol "$tmp/fpp"
+git clone https://github.com/FIDES-ANIMA/protocol "$tmp/fpp"
 cd "$tmp/fpp"
 ```
 

@@ -34,7 +34,7 @@ Adoption appends to SOUL.md / MEMORY.md and writes hash-chained entries to `.ope
 
 ## Other harnesses (not in this package)
 
-Graded adapters for Cursor, Claude Code, and Codex live in the [GitHub repository](https://github.com/ovrsr/freedom-preserving-protocol/tree/main/harness) — clone the repo; do not expect them inside this ClawHub skill.
+Graded adapters for Cursor, Claude Code, and Codex live in the [GitHub repository](https://github.com/FIDES-ANIMA/protocol/tree/main/harness) — clone the repo; do not expect them inside this ClawHub skill.
 
 ## Docs
 

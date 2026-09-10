@@ -7,7 +7,7 @@
   "author": "ovrsr",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ovrsr/freedom-preserving-protocol.git",
+    "url": "git+https://github.com/FIDES-ANIMA/protocol.git",
     "directory": "packages/protocol-core"
   },
   "main": "./dist/index.js",
@@ -46,9 +46,9 @@
   "engines": {
     "node": ">=22.19"
   },
-  "homepage": "https://github.com/ovrsr/freedom-preserving-protocol#readme",
+  "homepage": "https://github.com/FIDES-ANIMA/protocol#readme",
   "bugs": {
-    "url": "https://github.com/ovrsr/freedom-preserving-protocol/issues"
+    "url": "https://github.com/FIDES-ANIMA/protocol/issues"
   },
   "publishConfig": {
     "access": "public"
