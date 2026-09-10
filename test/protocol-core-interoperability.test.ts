@@ -102,6 +102,11 @@ describe("enforcement-core + trust-core interoperability", () => {
     assert.equal(ENFORCEMENT_PACKAGE_NAME, "@fides-anima/fpp-enforcement-core");
     assert.equal(TRUST_PACKAGE_NAME, "@fides-anima/fpp-trust-core");
     assert.equal(STEWARD_PACKAGE_NAME, "@fides-anima/fpp-steward-auth-core");
+    const protocolCoreVersion = (
+      JSON.parse(
+        readFileSync(join(REPO_ROOT, "packages/protocol-core/package.json"), "utf8"),
+      ) as { version: string }
+    ).version;
     for (const rel of [
       "packages/enforcement-core/package.json",
       "packages/trust-core/package.json",
@@ -113,7 +118,10 @@ describe("enforcement-core + trust-core interoperability", () => {
         dependencies?: Record<string, string>;
         peerDependencies?: Record<string, string>;
       };
-      assert.equal(pkg.dependencies?.["@fides-anima/fpp-protocol-core"], "1.0.2");
+      assert.equal(
+        pkg.dependencies?.["@fides-anima/fpp-protocol-core"],
+        protocolCoreVersion,
+      );
       assert.equal(pkg.dependencies?.openclaw, undefined);
       assert.equal(pkg.peerDependencies?.openclaw, undefined);
     }

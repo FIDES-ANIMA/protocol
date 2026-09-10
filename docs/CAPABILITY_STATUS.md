@@ -6,7 +6,7 @@ in this repository defers to this file when describing implementation status.
 If a claim elsewhere conflicts with this matrix, this matrix wins and the other
 document has a bug.
 
-Last reconciled against: skill `v1.3.9`, `@fides-anima/fpp-protocol-core` `v1.0.2`,
+Last reconciled against: skill `v1.3.9`, `@fides-anima/fpp-protocol-core` `v1.0.3`,
 `@fides-anima/fpp-steward-auth-core` `v0.1.0`, `@fides-anima/fpp-enforcement-core` `v1.0.3`,
 `@fides-anima/fpp-trust-core` `v1.0.2`, `@fides-anima/openclaw-fpp-plugin` `v1.1.18`,
 `@fides-anima/openclaw-fpp-trust` `v1.2.12`

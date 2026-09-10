@@ -2,14 +2,14 @@
 
 Shared versioned schemas and cryptographic contracts for the Freedom Preserving Protocol.
 
-Package version and protocol schema version are independent. This package (`1.0.2`) carries **schema version 2**.
+Package version and protocol schema version are independent. This package (`1.0.3`) carries **schema version 2**.
 
 ## Install
 
 This package is staged for public npm but has not been published from this repository yet. Until the first release, use the workspace or a local packed tarball.
 
 ```bash
-npm install @fides-anima/fpp-protocol-core@1.0.2
+npm install @fides-anima/fpp-protocol-core@1.0.3
 ```
 
 Published plugins pin an **exact** core version to prevent silent protocol drift.

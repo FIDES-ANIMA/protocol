@@ -68,3 +68,6 @@ docs/runbooks/dev-build-and-deploy.md
 
 # This file is used to probe the corpus for coverage metrics
 scripts/.corpus-probe.*
+
+# Track the shared root agent-instruction bridge.
+!/CLAUDE.md

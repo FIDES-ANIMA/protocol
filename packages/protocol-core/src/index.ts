@@ -7,7 +7,7 @@
  */
 
 export const PACKAGE_NAME = "@fides-anima/fpp-protocol-core" as const;
-export const PACKAGE_VERSION = "1.0.2" as const;
+export const PACKAGE_VERSION = "1.0.3" as const;
 /** Protocol schema version carried by this package release. */
 export const SCHEMA_VERSION = 2 as const;
 

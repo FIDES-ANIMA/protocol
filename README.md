@@ -9,7 +9,7 @@ Two routes in, deliberately separate:
 
 Canonical repository: [FIDES-ANIMA/protocol](https://github.com/FIDES-ANIMA/protocol). The predecessor location `ovrsr/freedom-preserving-protocol` is historical provenance; ClawHub coordinates (`clawhub:ovrsr/...`) remain the live distribution names.
 
-**Current line** (local `package.json`): skill `1.3.9`, `@fides-anima/openclaw-fpp-plugin` `1.1.18`, `@fides-anima/openclaw-fpp-trust` `1.2.12`, `@fides-anima/fpp-protocol-core` `1.0.2`, `@fides-anima/fpp-enforcement-core` `1.0.3`, `@fides-anima/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
+**Current line** (local `package.json`): skill `1.3.9`, `@fides-anima/openclaw-fpp-plugin` `1.1.18`, `@fides-anima/openclaw-fpp-trust` `1.2.12`, `@fides-anima/fpp-protocol-core` `1.0.3`, `@fides-anima/fpp-enforcement-core` `1.0.3`, `@fides-anima/fpp-trust-core` `1.0.2`. ClawHub install-metadata can lag a local rebuild — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md). Canonical capability matrix: [`docs/CAPABILITY_STATUS.md`](docs/CAPABILITY_STATUS.md).
 
 | Layer | Artifact | What it does |
 |-------|----------|--------------|
