@@ -65,7 +65,7 @@ if [[ -n "\${NPM_TOKEN:-}" || -n "\${NODE_AUTH_TOKEN:-}" ]]; then
   echo "raw token environment leaked" >&2
   exit 96
 fi
-if [[ "$1" != "whoami" && "$1" != "org" && "$1" != "publish" ]]; then
+if [[ "$1" != "whoami" && "$1" != "org" && "$1" != "publish" && "$1" != "view" ]]; then
   if env | cut -d= -f1 | grep -Eqi '^(npm_config.*(auth|password|username|otp|cert|key)|npm.?token|node.?auth.?token)'; then
     echo "credential-shaped environment leaked to public npm" >&2
     exit 95
@@ -89,6 +89,20 @@ if [[ "$1" == "view" ]]; then
   if [[ "$SCENARIO" == "network-error" ]]; then
     echo "npm error code ECONNRESET" >&2
     exit 1
+  fi
+  if [[ "$SCENARIO" == "view-stale" ]]; then
+    echo "npm error code E404" >&2
+    exit 1
+  fi
+  if [[ "$SCENARIO" == "cached-404" ]]; then
+    has_fresh_cache="false"
+    for arg in "$@"; do
+      if [[ "\$arg" == "--cache" ]]; then has_fresh_cache="true"; fi
+    done
+    if [[ "\$has_fresh_cache" != "true" ]]; then
+      echo "npm error code E404" >&2
+      exit 1
+    fi
   fi
   spec="$2"
   name="\${spec%@*}"
@@ -262,6 +276,11 @@ describe("guarded live npm publisher", () => {
     );
     assert.equal(publishCalls.length, 1);
     assert.match(publishCalls[0]!, new RegExp(` -w ${target}$`));
+    assert.equal(result.calls.some((call) => call === "npm ci"), false);
+    assert.equal(
+      result.calls.some((call) => call === "npm run verify:all"),
+      false,
+    );
   });
 
   it("resumes only after matching existing artifact integrity", () => {
@@ -274,6 +293,16 @@ describe("guarded live npm publisher", () => {
     );
     assert.equal(result.status, 0, result.output);
     assert.match(result.output, /RESUME: verified existing artifact/);
+    assert.match(result.output, /Skipping npm ci, verify:all, and publish:npm:dry/);
+    assert.equal(result.calls.some((call) => call === "npm ci"), false);
+    assert.equal(
+      result.calls.some((call) => call === "npm run verify:all"),
+      false,
+    );
+    assert.equal(
+      result.calls.some((call) => call === "npm run publish:npm:dry"),
+      false,
+    );
     const publishCalls = result.calls.filter((call) =>
       call.startsWith("npm publish "),
     );
@@ -282,6 +311,29 @@ describe("guarded live npm publisher", () => {
       publishCalls.some((call) => call.endsWith(`-w ${alreadyPublished}`)),
       false,
     );
+  });
+
+  it("does not treat a cached preflight 404 as an unpublished version", () => {
+    const result = runWithFakeCommands(["--confirm-live"], "cached-404");
+    assert.equal(result.status, 0, result.output);
+    const publishCalls = result.calls.filter((call) =>
+      call.startsWith("npm publish "),
+    );
+    assert.equal(publishCalls.length, expectedOrder.length);
+    assert.ok(
+      result.calls.some((call) => call.includes(" --cache ")),
+      result.calls.filter((call) => call.startsWith("npm view ")).join("\n"),
+    );
+  });
+
+  it("continues a live release when npm view lags behind a successful publish", () => {
+    const result = runWithFakeCommands(["--confirm-live"], "view-stale");
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.output, /npm accepted .* but npm view has not shown it yet/);
+    const publishCalls = result.calls.filter((call) =>
+      call.startsWith("npm publish "),
+    );
+    assert.equal(publishCalls.length, expectedOrder.length);
   });
 
   it("refuses resume when an existing artifact differs", () => {
@@ -352,6 +404,12 @@ describe("guarded live npm publisher", () => {
     assert.match(source, /npm ci/);
     assert.match(source, /npm run verify:all/);
     assert.match(source, /npm run publish:npm:dry/);
+    assert.match(source, /authenticated_npm view/);
+    assert.match(source, /--cache/);
+    assert.match(
+      source,
+      /Skipping npm ci, verify:all, and publish:npm:dry for partial-run recovery/,
+    );
     assert.match(
       source,
       /authenticated_npm publish --ignore-scripts --access public/,

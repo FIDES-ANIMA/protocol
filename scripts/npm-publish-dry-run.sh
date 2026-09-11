@@ -64,15 +64,18 @@ local_version() {
 }
 
 registry_has_exact_version() {
-  local package_name="$1" version="$2" output status
+  local package_name="$1" version="$2" output status cache_dir
+  cache_dir="$(mktemp -d)" || die "Unable to create npm view cache directory"
   set +e
   output="$(
     node "$PUBLIC_NPM_LAUNCHER" view "${package_name}@${version}" version \
-      --registry "$REGISTRY" 2>&1
+      --registry "$REGISTRY" --cache "$cache_dir" 2>&1
   )"
   status=$?
   set -e
+  rm -rf "$cache_dir"
   if [[ $status -eq 0 ]]; then
+    output="$(printf '%s' "$output" | tr -d '\r' | awk 'NF { line = $0 } END { print line }')"
     [[ "$output" == "$version" ]] \
       || die "Registry returned unexpected version for ${package_name}: ${output}"
     return 0

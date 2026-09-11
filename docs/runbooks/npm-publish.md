@@ -116,10 +116,12 @@ The token needs read/write access to the `fides-anima` scope and **Bypass 2FA**
 enabled when the account does not use publishing 2FA. Limit it to the required
 packages/scope, choose the shortest practical expiration, and revoke it after
 the release. The script reads only `NPM_TOKEN`, sends it over stdin to the npm
-launcher, and injects it only into authenticated npm commands. Verification
-uses a token-free npm config, and live publish disables lifecycle scripts. No
-temporary token file or token-bearing command argument is created. Do not
-commit `.env`.
+launcher, and injects it only into authenticated npm commands. `npm ci`,
+verify:all, dry-run, and pack use a token-free npm config. Registry existence
+checks use the token with a fresh npm cache so a cached preflight 404 cannot
+hide a version that `npm publish` already accepted. Live publish disables
+lifecycle scripts. No temporary token file or token-bearing command argument is
+created. Do not commit `.env`.
 
 After committing the release changes, run the non-publishing preflight:
 
@@ -140,11 +142,15 @@ registry first, then resume:
 FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live --resume
 ```
 
-Resume still runs the shared dry-run gate first. Already-published exact
-versions are packed rather than dry-published, then skipped for live upload
-only after their registry integrity exactly matches a fresh local dry-pack.
-Missing versions are then published in dependency order. For deliberate
-one-package recovery, use `--package <name>` instead; that mode never skips
-an existing version. Never use `--force`; bump any conflicting version. The
-script allows up to 150 seconds for a newly uploaded version to become publicly
-visible before stopping. It does not publish or modify ClawHub packages.
+`--resume` does not rerun `npm ci`, `verify:all`, or `publish:npm:dry`. It still
+requires a clean Git tree, the `fa-steward` identity, organization owner access,
+and matching registry integrity for versions that already exist. It then
+publishes missing versions in dependency order. Live `--package <name>`
+recovery skips the same verification gate. Use `--preflight-only` when you
+want the full gate without publishing.
+
+Registry existence checks use a fresh npm cache so a preflight 404 cannot hide
+a version that `npm publish` already accepted. If `npm view` still lags after a
+successful publish, the script warns and continues instead of aborting the
+remaining packages. Never use `--force`; bump any conflicting version. It does
+not publish or modify ClawHub packages.

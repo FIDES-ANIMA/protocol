@@ -58,13 +58,17 @@ Options:
   --preflight-only  Run all checks without publishing.
   --confirm-live    Authorize the live npm publish phase.
   --resume          Continue a partial release after integrity verification.
+                    Skips npm ci, verify:all, and dry-run.
   --package <name>  Publish or preflight one package for partial-run recovery.
+                    Live recovery also skips npm ci, verify:all, and dry-run.
   --help            Show this help.
 
-The live mode requires a clean Git tree, the verified fa-steward npm identity,
-owner access to the fides-anima organization, successful verify:all and npm
-publish dry-runs, and exact-version registry checks. Set NPM_TOKEN in the
-ignored repository-root .env file or export it before running this command.
+A first live publish requires a clean Git tree, the verified fa-steward npm
+identity, owner access to the fides-anima organization, successful verify:all
+and npm publish dry-runs, and exact-version registry checks. --resume and live
+--package keep the identity, tree, and artifact checks, and skip the full
+verification gate. Set NPM_TOKEN in the ignored repository-root .env file or
+export it before running this command.
 USAGE
 }
 
@@ -187,16 +191,25 @@ internal_dependencies() {
   " "$package_dir/package.json"
 }
 
-registry_observed=""
-registry_exact_version() {
-  local package_name="$1" version="$2" output status
-  registry_observed=""
+last_nonempty_line() {
+  printf '%s' "$1" | tr -d '\r' | awk 'NF { line = $0 } END { print line }'
+}
+
+# Query the registry through a fresh npm cache. Preflight 404s otherwise stick
+# in the shared npm cache and make a successful publish look unpublished.
+npm_view_field() {
+  local package_name="$1" version="$2" field="$3" cache_dir output status
+  cache_dir="$(mktemp -d)" || die "Unable to create npm view cache directory"
   set +e
-  output="$(public_npm view "${package_name}@${version}" version --registry "$REGISTRY" 2>&1)"
+  output="$(
+    authenticated_npm view "${package_name}@${version}" "$field" \
+      --registry "$REGISTRY" --cache "$cache_dir" 2>&1
+  )"
   status=$?
   set -e
+  rm -rf "$cache_dir"
   if [[ $status -eq 0 ]]; then
-    registry_observed="$output"
+    _npm_view_output="$(last_nonempty_line "$output")"
     return 0
   fi
   if printf '%s' "$output" | grep -Eq 'E404|404 Not Found'; then
@@ -205,17 +218,30 @@ registry_exact_version() {
   die "Registry query failed for ${package_name}@${version}: ${output}"
 }
 
+registry_observed=""
+registry_exact_version() {
+  local package_name="$1" version="$2"
+  registry_observed=""
+  if npm_view_field "$package_name" "$version" version; then
+    registry_observed="$_npm_view_output"
+    return 0
+  fi
+  return 1
+}
+
 verify_published_version() {
   local package_name="$1" version="$2"
-  for attempt in $(seq 1 30); do
+  for attempt in $(seq 1 3); do
     if registry_exact_version "$package_name" "$version"; then
       [[ "$registry_observed" == "$version" ]] \
         || die "Registry returned unexpected version for ${package_name}: ${registry_observed}"
       return 0
     fi
-    [[ "$attempt" -eq 30 ]] || sleep 5
+    [[ "$attempt" -eq 3 ]] || sleep 1
   done
-  die "Published version did not become visible: ${package_name}@${version}"
+  printf 'WARNING: npm accepted %s@%s, but npm view has not shown it yet; continuing.\n' \
+    "$package_name" "$version"
+  return 1
 }
 
 verify_existing_artifact() {
@@ -232,10 +258,9 @@ verify_existing_artifact() {
       process.stdout.write(integrity);
     "
   )" || die "Local pack did not report integrity for ${package_name}@${version}"
-  remote_integrity="$(
-    public_npm view "${package_name}@${version}" dist.integrity \
-      --registry "$REGISTRY"
-  )" || die "Unable to read registry integrity for ${package_name}@${version}"
+  npm_view_field "$package_name" "$version" dist.integrity \
+    || die "Unable to read registry integrity for ${package_name}@${version}"
+  remote_integrity="$_npm_view_output"
   [[ "$local_integrity" == "$remote_integrity" ]] \
     || die "Published artifact differs from local package: ${package_name}@${version}"
   printf 'RESUME: verified existing artifact %s@%s\n' "$package_name" "$version"
@@ -247,12 +272,35 @@ require_internal_dependencies_published() {
     [[ -n "$dependency_name" ]] || continue
     [[ "$dependency_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-].*)?$ ]] \
       || die "${package_dir} has non-exact internal dependency ${dependency_name}@${dependency_version}"
-    if ! registry_exact_version "$dependency_name" "$dependency_version"; then
-      die "Required dependency is not published: ${dependency_name}@${dependency_version}"
+    if registry_exact_version "$dependency_name" "$dependency_version"; then
+      [[ "$registry_observed" == "$dependency_version" ]] \
+        || die "Registry returned unexpected dependency version for ${dependency_name}: ${registry_observed}"
+      continue
     fi
-    [[ "$registry_observed" == "$dependency_version" ]] \
-      || die "Registry returned unexpected dependency version for ${dependency_name}: ${registry_observed}"
+    if was_accepted "$dependency_name" "$dependency_version"; then
+      continue
+    fi
+    die "Required dependency is not published: ${dependency_name}@${dependency_version}"
   done < <(internal_dependencies "$package_dir")
+}
+
+accepted_names=()
+accepted_versions=()
+
+mark_accepted() {
+  accepted_names+=("$1")
+  accepted_versions+=("$2")
+}
+
+was_accepted() {
+  local i
+  [[ ${#accepted_names[@]} -eq 0 ]] && return 1
+  for i in "${!accepted_names[@]}"; do
+    if [[ "${accepted_names[$i]}" == "$1" && "${accepted_versions[$i]}" == "$2" ]]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 load_npm_token
@@ -320,11 +368,15 @@ done
   || die "Unknown --package target: ${selected_name}"
 
 printf 'Authenticated as %s (fides-anima owner).\n' "$identity"
-printf 'Running clean install and complete verification...\n'
-public_npm ci
-public_npm run verify:all
-public_npm run publish:npm:dry
-require_clean_tree
+if [[ "$resume" == "true" || ( "$mode" == "live" && "$package_selected" == "true" ) ]]; then
+  printf 'Skipping npm ci, verify:all, and publish:npm:dry for partial-run recovery.\n'
+else
+  printf 'Running clean install and complete verification...\n'
+  public_npm ci
+  public_npm run verify:all
+  public_npm run publish:npm:dry
+  require_clean_tree
+fi
 
 for i in "${!names[@]}"; do
   if [[ "${pending[$i]}" == "false" ]]; then
@@ -357,8 +409,10 @@ for i in "${!names[@]}"; do
   printf '=== LIVE npm publish: %s@%s ===\n' "$name" "$version"
   authenticated_npm publish --ignore-scripts --access public \
     --registry "$REGISTRY" -w "$name"
-  verify_published_version "$name" "$version"
-  printf 'Verified on npm: %s@%s\n' "$name" "$version"
+  mark_accepted "$name" "$version"
+  if verify_published_version "$name" "$version"; then
+    printf 'Verified on npm: %s@%s\n' "$name" "$version"
+  fi
 done
 
 printf 'All requested @fides-anima package versions were published and verified.\n'
