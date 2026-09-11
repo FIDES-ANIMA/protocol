@@ -60,7 +60,7 @@ npm run verify:all
 npm run publish:npm:dry
 ```
 
-`publish:npm:dry` invokes `npm publish --dry-run --access public` for every package in dependency order. It runs each package's `prepack`, validates public access metadata, and never uploads a release.
+`publish:npm:dry` invokes `npm publish --dry-run --access public` for every unpublished exact version, in dependency order. If that exact version is already on the registry, it runs `npm pack --dry-run` instead so a partial or completed release does not fail npm's overwrite check. Both paths run the package's `prepack`, validate the tarball listing, and never upload a release.
 
 The order is:
 
@@ -102,8 +102,9 @@ manifest names. Do not run a ClawHub publish as part of npm staging.
 The guarded publisher derives names and versions from the manifests listed
 above. It requires a clean Git tree, the verified `fa-steward` identity,
 `fides-anima` owner access, the configured and explicit
-`https://registry.npmjs.org/` registry, absent exact versions, `npm ci`, the
-full verification gate, and all ten dry-runs.
+`https://registry.npmjs.org/` registry, `npm ci`, the full verification gate,
+and dry-runs of every public package. Exact versions that already exist are a
+release blocker unless `--resume` is used.
 
 Store the granular npm token in the ignored repository-root `.env`:
 
@@ -139,10 +140,11 @@ registry first, then resume:
 FPP_NPM_PUBLISH=YES npm run publish:npm -- --confirm-live --resume
 ```
 
-Resume skips an existing version only after its registry integrity exactly
-matches a fresh local dry-pack. It then publishes missing versions in dependency
-order. For deliberate one-package recovery, use `--package <name>` instead;
-that mode never skips an existing version. Never use `--force`; bump any
-conflicting version. The script allows up to 150 seconds for a newly uploaded
-version to become publicly visible before stopping. It does not publish or
-modify ClawHub packages.
+Resume still runs the shared dry-run gate first. Already-published exact
+versions are packed rather than dry-published, then skipped for live upload
+only after their registry integrity exactly matches a fresh local dry-pack.
+Missing versions are then published in dependency order. For deliberate
+one-package recovery, use `--package <name>` instead; that mode never skips
+an existing version. Never use `--force`; bump any conflicting version. The
+script allows up to 150 seconds for a newly uploaded version to become publicly
+visible before stopping. It does not publish or modify ClawHub packages.
