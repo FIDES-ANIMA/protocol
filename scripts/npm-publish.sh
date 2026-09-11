@@ -191,8 +191,12 @@ internal_dependencies() {
   " "$package_dir/package.json"
 }
 
-last_nonempty_line() {
-  printf '%s' "$1" | tr -d '\r' | awk 'NF { line = $0 } END { print line }'
+npm_view_payload() {
+  # npm prints "npm notice" banners on stdout/stderr; keep the last real field.
+  printf '%s' "$1" | tr -d '\r' | awk '
+    NF && $0 !~ /^npm / { line = $0 }
+    END { print line }
+  '
 }
 
 # Query the registry through a fresh npm cache. Preflight 404s otherwise stick
@@ -203,13 +207,15 @@ npm_view_field() {
   set +e
   output="$(
     authenticated_npm view "${package_name}@${version}" "$field" \
-      --registry "$REGISTRY" --cache "$cache_dir" 2>&1
+      --registry "$REGISTRY" --cache "$cache_dir" --loglevel=error 2>&1
   )"
   status=$?
   set -e
   rm -rf "$cache_dir"
   if [[ $status -eq 0 ]]; then
-    _npm_view_output="$(last_nonempty_line "$output")"
+    _npm_view_output="$(npm_view_payload "$output")"
+    [[ -n "$_npm_view_output" ]] \
+      || die "Registry view returned no ${field} for ${package_name}@${version}"
     return 0
   fi
   if printf '%s' "$output" | grep -Eq 'E404|404 Not Found'; then

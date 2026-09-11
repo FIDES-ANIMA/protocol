@@ -69,13 +69,18 @@ registry_has_exact_version() {
   set +e
   output="$(
     node "$PUBLIC_NPM_LAUNCHER" view "${package_name}@${version}" version \
-      --registry "$REGISTRY" --cache "$cache_dir" 2>&1
+      --registry "$REGISTRY" --cache "$cache_dir" --loglevel=error 2>&1
   )"
   status=$?
   set -e
   rm -rf "$cache_dir"
   if [[ $status -eq 0 ]]; then
-    output="$(printf '%s' "$output" | tr -d '\r' | awk 'NF { line = $0 } END { print line }')"
+    output="$(printf '%s' "$output" | tr -d '\r' | awk '
+      NF && $0 !~ /^npm / { line = $0 }
+      END { print line }
+    ')"
+    [[ -n "$output" ]] \
+      || die "Registry view returned no version for ${package_name}@${version}"
     [[ "$output" == "$version" ]] \
       || die "Registry returned unexpected version for ${package_name}: ${output}"
     return 0

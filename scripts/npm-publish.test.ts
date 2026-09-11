@@ -115,7 +115,14 @@ if [[ "$1" == "view" ]]; then
         echo "sha512-test-\${name}"
       fi
     else
-      echo "$version"
+      if [[ "$SCENARIO" == "view-notices" ]]; then
+        echo "npm notice"
+        echo "npm notice New major version of npm available!"
+        echo "$version"
+        echo "npm notice"
+      else
+        echo "$version"
+      fi
     fi
     exit 0
   fi
@@ -313,6 +320,22 @@ describe("guarded live npm publisher", () => {
     );
   });
 
+  it("ignores npm notice banners when reading a published version", () => {
+    const alreadyPublished = "@fides-anima/fpp-protocol-core";
+    const result = runWithFakeCommands(
+      ["--confirm-live", "--resume"],
+      "view-notices",
+      "YES",
+      [alreadyPublished],
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.doesNotMatch(result.output, /unexpected version/);
+    const publishCalls = result.calls.filter((call) =>
+      call.startsWith("npm publish "),
+    );
+    assert.equal(publishCalls.length, expectedOrder.length - 1);
+  });
+
   it("does not treat a cached preflight 404 as an unpublished version", () => {
     const result = runWithFakeCommands(["--confirm-live"], "cached-404");
     assert.equal(result.status, 0, result.output);
@@ -406,6 +429,7 @@ describe("guarded live npm publisher", () => {
     assert.match(source, /npm run publish:npm:dry/);
     assert.match(source, /authenticated_npm view/);
     assert.match(source, /--cache/);
+    assert.match(source, /npm_view_payload/);
     assert.match(
       source,
       /Skipping npm ci, verify:all, and publish:npm:dry for partial-run recovery/,

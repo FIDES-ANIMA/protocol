@@ -44,7 +44,14 @@ if [[ "$1" == "view" ]]; then
   name="\${spec%@*}"
   version="\${spec##*@}"
   if grep -Fqx "$name" "$PUBLISHED_STATE"; then
-    echo "$version"
+    if [[ "$SCENARIO" == "view-notices" ]]; then
+      echo "npm notice"
+      echo "npm notice New major version of npm available!"
+      echo "$version"
+      echo "npm notice"
+    else
+      echo "$version"
+    fi
     exit 0
   fi
   echo "npm error code E404" >&2
@@ -143,6 +150,20 @@ describe("public npm dry-run", () => {
       result.calls.filter((call) => call.startsWith("npm publish --dry-run "))
         .length,
       9,
+    );
+  });
+
+  it("ignores npm notice banners when deciding a version is already published", () => {
+    const alreadyPublished = "@fides-anima/fpp-protocol-core";
+    const result = runDryRun("view-notices", [alreadyPublished]);
+    assert.equal(result.status, 0, result.output);
+    assert.doesNotMatch(result.output, /unexpected version/);
+    assert.equal(
+      result.calls.some((call) =>
+        call.startsWith("npm pack --dry-run ") &&
+        call.endsWith(`-w ${alreadyPublished}`),
+      ),
+      true,
     );
   });
 
